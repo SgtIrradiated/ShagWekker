@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Multi‑Countdown Clock</title>
+  <style>
+    :root{
+      --bg:#0b1020; --card:#121a33; --ink:#e8ecff; --muted:#aab3de; --accent:#6aa2ff;
+      --danger:#ff6a6a; --ok:#7ef7a1; --ring:#2a386b;
+    
+      --count-size: 32px; /* base size for countdown digits */
+      --next-scale: 1.25; /* scale factor for the 'next' card */
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font:16px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color:var(--ink); background:radial-gradient(1200px 600px at 10% -10%, #1b2550 0,#0b1020 50%, #070b16 100%);
+      display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .wrap{width:min(960px,100%);}
+    header{display:flex; gap:16px; align-items:end; justify-content:space-between; margin-bottom:16px}
+    h1{font-size:20px; margin:0; letter-spacing:.3px; font-weight:700; color:var(--ink)}
+    #clock{font-variant-numeric:tabular-nums; font-weight:700; font-size:28px}
+    .cards{display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:12px}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 40%), var(--card);
+      border:1px solid rgba(255,255,255,.08); border-radius:16px; padding:16px; position:relative;
+      box-shadow:0 10px 30px rgba(0,0,0,.25);
+    }
+    .card.next{outline:2px solid var(--accent); box-shadow:0 0 0 4px rgba(106,162,255,.15),0 14px 40px rgba(0,0,0,.35)}
+    .card.next .count{font-size: calc(var(--count-size) * var(--next-scale));}
+    .when{color:var(--muted); font-size:14px}
+    .time-label{font-size:15px; letter-spacing:.3px}
+    .count{
+      margin-top:8px;
+      font-size: var(--count-size);
+      font-variant-numeric:tabular-nums;
+      font-weight:800;
+      transition: font-size .18s ease;
+    }
+    .due{color:var(--ok)}
+    .late{color:var(--danger)}
+    .controls{display:flex; gap:8px; margin:14px 0 22px}
+    input[type="time"], button{height:40px; border-radius:12px; border:1px solid rgba(255,255,255,.12); background:#0e1530; color:var(--ink); padding:0 12px; font:inherit}
+    button{cursor:pointer; background:#12214a}
+    button:hover{background:#16285c}
+    .hint{color:var(--muted); font-size:13px; margin-top:6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Multi‑Countdown Clock</h1>
+      <div id="clock" aria-live="polite" title="Current local time"></div>
+    </header>
+
+    <form id="addForm" class="controls" autocomplete="off">
+      <input type="time" id="timeInput" required aria-label="Add time (HH:MM)" />
+      <button type="submit">Add time</button>
+      <button type="button" id="resetBtn" title="Restore defaults">Reset</button>
+    </form>
+    <div class="hint">Tip: you can also share a link with custom times using <code>?times=10:15,12:00,14:30</code>.</div>
+
+    <section class="cards" id="cards"></section>
+  </div>
+
+  <script>
+    // ---------- Configuration ----------
+    const DEFAULT_TIMES = ["10:15","12:00","14:30"]; // 24h HH:MM
+    const STORAGE_KEY = "multiCountdown.times";
+
+    // ---------- Utilities ----------
+    const pad = n => String(n).padStart(2, '0');
+    const toMinutes = hhmm => { const [h,m] = hhmm.split(":").map(Number); return h*60 + m; };
+
+    function parseTimesFromURL(){
+      const qs = new URLSearchParams(location.search);
+      const raw = qs.get('times');
+      if(!raw) return null;
+      return raw.split(',').map(s=>s.trim()).filter(v=>/^\d{1,2}:\d{2}$/.test(v));
+    }
+
+    function loadTimes(){
+      const fromURL = parseTimesFromURL();
+      if(fromURL && fromURL.length) return normalizeTimes(fromURL);
+      try{
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
+        if(Array.isArray(saved) && saved.length) return normalizeTimes(saved);
+      }catch{}
+      return normalizeTimes(DEFAULT_TIMES);
+    }
+
+    function saveTimes(times){
+      try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(times)); }catch{}
+    }
+
+    function normalizeTimes(arr){
+      return Array.from(new Set(arr.map(t=>t.trim())))
+        .filter(v=>/^\d{1,2}:\d{2}$/.test(v))
+        .map(v=>{ let [h,m]=v.split(':').map(Number); h=Math.max(0,Math.min(23,h)); m=Math.max(0,Math.min(59,m)); return `${pad(h)}:${pad(m)}`; })
+        .sort((a,b)=>toMinutes(a)-toMinutes(b));
+    }
+
+    function nextOccurrence(now, hhmm){
+      const [h,m] = hhmm.split(":").map(Number);
+      const target = new Date(now);
+      target.setHours(h, m, 0, 0);
+      if(target <= now) target.setDate(target.getDate()+1); // tomorrow
+      return target;
+    }
+
+    function diffParts(ms){
+      const sec = Math.max(0, Math.floor(ms/1000));
+      const d = Math.floor(sec/86400);
+      const h = Math.floor((sec%86400)/3600);
+      const m = Math.floor((sec%3600)/60);
+      const s = sec%60;
+      return {d,h,m,s};
+    }
+
+    function formatDiff({d,h,m,s}){
+      const core = `${pad(h + d*24)}:${pad(m)}:${pad(s)}`; // fold days into hours for clarity
+      return core;
+    }
+
+    // ---------- App ----------
+    const cardsEl = document.getElementById('cards');
+    const clockEl = document.getElementById('clock');
+    const addForm = document.getElementById('addForm');
+    const timeInput = document.getElementById('timeInput');
+    const resetBtn = document.getElementById('resetBtn');
+
+    let TIMES = loadTimes();
+
+    function buildUI(){
+      cardsEl.innerHTML = '';
+      TIMES.forEach(t => {
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.dataset.time = t;
+        card.innerHTML = `
+          <div class="when"><span class="time-label">${t}</span> daily</div>
+          <div class="count" aria-live="off">--:--:--</div>
+        `;
+        cardsEl.appendChild(card);
+      });
+    }
+
+    function update(){
+      const now = new Date();
+      clockEl.textContent = now.toLocaleTimeString(undefined, {hour12:false});
+
+      // Update each card and discover the next soonest
+      let soonest = {ms: Number.POSITIVE_INFINITY, el: null};
+
+      document.querySelectorAll('.card').forEach(card =>{
+        const t = card.dataset.time;
+        const next = nextOccurrence(now, t);
+        const remain = next - now; // ms
+        const countEl = card.querySelector('.count');
+
+        const parts = diffParts(remain);
+        countEl.textContent = formatDiff(parts);
+
+        card.classList.toggle('due', remain <= 1000);
+        card.classList.toggle('late', remain < 0);
+
+        if(remain < soonest.ms){ soonest = {ms: remain, el: card}; }
+      });
+
+      // highlight only the next event
+      document.querySelectorAll('.card.next').forEach(el=>el.classList.remove('next'));
+      if(soonest.el) soonest.el.classList.add('next');
+    }
+
+    // Form handlers
+    addForm.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      const v = timeInput.value.trim();
+      if(!/^\d{2}:\d{2}$/.test(v)) return;
+      const next = normalizeTimes([...TIMES, v]);
+      TIMES = next;
+      saveTimes(TIMES);
+      buildUI();
+      update();
+      timeInput.value = '';
+    });
+
+    resetBtn.addEventListener('click', ()=>{
+      TIMES = normalizeTimes(DEFAULT_TIMES);
+      saveTimes(TIMES);
+      buildUI();
+      update();
+    });
+
+    // Init
+    buildUI();
+    update();
+    setInterval(update, 1000);
+  </script>
+</body>
+</html>
