@@ -9,9 +9,14 @@
 <body>
   <div class="wrap">
     <header>
-      <h1>ShagWekker</h1>
+      <h1>ShagWekker <img src="logo.svg" alt="Logo" id="logoImage" /></h1>
       <div id="clock" aria-live="polite" title="Current local time"></div>
     </header>
+
+    <div class="controls" id="imgControls">
+      <label for="imgSize">Image size</label>
+      <input type="range" id="imgSize" min="50" max="300" value="150" />
+    </div>
 
     <form id="addForm" class="controls" autocomplete="off">
       <input type="time" id="timeInput" required aria-label="Add time (HH:MM)" />
