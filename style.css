@@ -49,3 +49,7 @@ input[type="time"], button{height:40px; border-radius:12px; border:1px solid rgb
 button{cursor:pointer; background:#12214a}
 button:hover{background:#16285c}
 .hint{color:var(--muted); font-size:13px; margin-top:6px}
+
+#defaultList{list-style:none;padding:0;margin:0 0 24px;display:flex;flex-direction:column;gap:8px}
+.default-item{background:rgba(255,255,255,.04);border-radius:12px;padding:12px}
+.user-card{outline:2px solid red}

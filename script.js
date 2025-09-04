@@ -1,31 +1,22 @@
 /* ---------- Configuration ---------- */
 const DEFAULT_TIMES = ["10:15","12:00","14:30"]; // 24h HH:MM
-const STORAGE_KEY = "multiCountdown.times";
+const USER_STORAGE_KEY = "multiCountdown.userTimes";
 const WEEKDAY_COUNTDOWN = { time: "16:00", label: "weekdays" };
 
 /* ---------- Utilities ---------- */
 const pad = n => String(n).padStart(2, '0');
 const toMinutes = hhmm => { const [h,m] = hhmm.split(":").map(Number); return h*60 + m; };
 
-function parseTimesFromURL(){
-  const qs = new URLSearchParams(location.search);
-  const raw = qs.get('times');
-  if(!raw) return null;
-  return raw.split(',').map(s=>s.trim()).filter(v=>/^\d{1,2}:\d{2}$/.test(v));
-}
-
-function loadTimes(){
-  const fromURL = parseTimesFromURL();
-  if(fromURL && fromURL.length) return normalizeTimes(fromURL);
+function loadUserTimes(){
   try{
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)||"null");
-    if(Array.isArray(saved) && saved.length) return normalizeTimes(saved);
+    const saved = JSON.parse(localStorage.getItem(USER_STORAGE_KEY)||"null");
+    if(Array.isArray(saved)) return normalizeTimes(saved);
   }catch{}
-  return normalizeTimes(DEFAULT_TIMES);
+  return [];
 }
 
-function saveTimes(times){
-  try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(times)); }catch{}
+function saveUserTimes(times){
+  try{ localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(times)); }catch{}
 }
 
 function normalizeTimes(arr){
@@ -74,36 +65,51 @@ function formatDiff({d,h,m,s}){
 }
 
 /* ---------- App ---------- */
-const cardsEl = document.getElementById('cards');
+const defaultListEl = document.getElementById('defaultList');
+const userCardsEl = document.getElementById('userCards');
 const clockEl = document.getElementById('clock');
 const addForm = document.getElementById('addForm');
 const timeInput = document.getElementById('timeInput');
 const resetBtn = document.getElementById('resetBtn');
 
-let TIMES = loadTimes();
+let USER_TIMES = loadUserTimes();
 
 function buildUI(){
-  cardsEl.innerHTML = '';
-  TIMES.forEach(t => {
+  // default timers
+  defaultListEl.innerHTML = '';
+  DEFAULT_TIMES.forEach(t => {
+    const li = document.createElement('li');
+    li.className = 'default-item timer';
+    li.dataset.time = t;
+    li.innerHTML = `
+      <div class="when"><span class="time-label">${t}</span> daily</div>
+      <div class="count" aria-live="off">--:--:--</div>
+    `;
+    defaultListEl.appendChild(li);
+  });
+
+  const wLi = document.createElement('li');
+  wLi.className = 'default-item timer';
+  wLi.dataset.time = WEEKDAY_COUNTDOWN.time;
+  wLi.dataset.weekdays = 'true';
+  wLi.innerHTML = `
+    <div class="when"><span class="time-label">${WEEKDAY_COUNTDOWN.time}</span> ${WEEKDAY_COUNTDOWN.label}</div>
+    <div class="count" aria-live="off">--:--:--</div>
+  `;
+  defaultListEl.appendChild(wLi);
+
+  // user timers
+  userCardsEl.innerHTML = '';
+  USER_TIMES.forEach(t => {
     const card = document.createElement('article');
-    card.className = 'card';
+    card.className = 'card user-card timer';
     card.dataset.time = t;
     card.innerHTML = `
       <div class="when"><span class="time-label">${t}</span> daily</div>
       <div class="count" aria-live="off">--:--:--</div>
     `;
-    cardsEl.appendChild(card);
+    userCardsEl.appendChild(card);
   });
-
-  const wCard = document.createElement('article');
-  wCard.className = 'card';
-  wCard.dataset.time = WEEKDAY_COUNTDOWN.time;
-  wCard.dataset.weekdays = 'true';
-  wCard.innerHTML = `
-    <div class="when"><span class="time-label">${WEEKDAY_COUNTDOWN.time}</span> ${WEEKDAY_COUNTDOWN.label}</div>
-    <div class="count" aria-live="off">--:--:--</div>
-  `;
-  cardsEl.appendChild(wCard);
 }
 
 function update(){
@@ -112,23 +118,23 @@ function update(){
 
   let soonest = {ms: Number.POSITIVE_INFINITY, el: null};
 
-  document.querySelectorAll('.card').forEach(card =>{
-    const t = card.dataset.time;
-    const weekdayOnly = card.dataset.weekdays === 'true';
+  document.querySelectorAll('.timer').forEach(item =>{
+    const t = item.dataset.time;
+    const weekdayOnly = item.dataset.weekdays === 'true';
     const next = weekdayOnly ? nextWeekdayOccurrence(now, t) : nextOccurrence(now, t);
     const remain = next - now;
-    const countEl = card.querySelector('.count');
+    const countEl = item.querySelector('.count');
 
     const parts = diffParts(remain);
     countEl.textContent = formatDiff(parts);
 
-    card.classList.toggle('due', remain <= 1000);
-    card.classList.toggle('late', remain < 0);
+    item.classList.toggle('due', remain <= 1000);
+    item.classList.toggle('late', remain < 0);
 
-    if(remain < soonest.ms){ soonest = {ms: remain, el: card}; }
+    if(remain < soonest.ms){ soonest = {ms: remain, el: item}; }
   });
 
-  document.querySelectorAll('.card.next').forEach(el=>el.classList.remove('next'));
+  document.querySelectorAll('.timer.next').forEach(el=>el.classList.remove('next'));
   if(soonest.el) soonest.el.classList.add('next');
 }
 
@@ -136,17 +142,17 @@ addForm.addEventListener('submit', (e)=>{
   e.preventDefault();
   const v = timeInput.value.trim();
   if(!/^\d{2}:\d{2}$/.test(v)) return;
-  const next = normalizeTimes([...TIMES, v]);
-  TIMES = next;
-  saveTimes(TIMES);
+  const next = normalizeTimes([...USER_TIMES, v]);
+  USER_TIMES = next;
+  saveUserTimes(USER_TIMES);
   buildUI();
   update();
   timeInput.value = '';
 });
 
 resetBtn.addEventListener('click', ()=>{
-  TIMES = normalizeTimes(DEFAULT_TIMES);
-  saveTimes(TIMES);
+  USER_TIMES = [];
+  saveUserTimes(USER_TIMES);
   buildUI();
   update();
 });
