@@ -2,6 +2,8 @@
   --bg:#0b1020; --card:#121a33; --ink:#e8ecff; --muted:#aab3de; --accent:#6aa2ff;
   --danger:#ff6a6a; --ok:#7ef7a1; --ring:#2a386b;
 
+  --title-size: 100px; /* base size for the ShagWekker title */
+
   --count-size: 32px; /* base size for countdown digits */
   --next-scale: 1.25; /* scale factor for the 'next' card */
 }
@@ -14,7 +16,8 @@ body{
 }
 .wrap{width:min(960px,100%);}
 header{display:flex; gap:16px; align-items:end; justify-content:space-between; margin-bottom:16px}
-h1{font-size:20px; margin:0; letter-spacing:.3px; font-weight:700; color:var(--ink)}
+h1{margin:0; letter-spacing:.3px; font-weight:700; color:var(--ink)}
+.ShagWekkerTitel{font-size:var(--title-size); /* allows adjusting ShagWekker title size */}
 #clock{font-variant-numeric:tabular-nums; font-weight:700; font-size:28px}
 .cards{display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:12px}
 .card{
