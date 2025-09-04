@@ -79,6 +79,8 @@ const clockEl = document.getElementById('clock');
 const addForm = document.getElementById('addForm');
 const timeInput = document.getElementById('timeInput');
 const resetBtn = document.getElementById('resetBtn');
+const imgSizeInput = document.getElementById('imgSize');
+const logoImage = document.getElementById('logoImage');
 
 let TIMES = loadTimes();
 
@@ -150,6 +152,14 @@ resetBtn.addEventListener('click', ()=>{
   buildUI();
   update();
 });
+
+if(imgSizeInput && logoImage){
+  const updateImageSize = () => {
+    logoImage.style.width = imgSizeInput.value + 'px';
+  };
+  imgSizeInput.addEventListener('input', updateImageSize);
+  updateImageSize();
+}
 
 buildUI();
 update();
