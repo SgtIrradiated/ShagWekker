@@ -2,7 +2,7 @@
   --bg:#0b1020; --card:#121a33; --ink:#e8ecff; --muted:#aab3de; --accent:#6aa2ff;
   --danger:#ff6a6a; --ok:#7ef7a1; --ring:#2a386b;
 
-  --title-size: 20px; /* base size for the ShagWekker title */
+  --title-size: 100px; /* base size for the ShagWekker title */
 
   --count-size: 32px; /* base size for countdown digits */
   --next-scale: 1.25; /* scale factor for the 'next' card */
