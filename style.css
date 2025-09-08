@@ -16,6 +16,9 @@ body{
 }
 .wrap{width:min(960px,100%);}
 header{display:flex; gap:16px; align-items:end; justify-content:space-between; margin-bottom:16px}
+.header-right{display:flex; flex-direction:column; align-items:flex-end; gap:8px}
+.main-nav a{color:var(--ink); text-decoration:none}
+.main-nav a:hover{text-decoration:underline}
 h1{margin:0; letter-spacing:.3px; font-weight:700; color:var(--ink)}
 .ShagWekkerTitel{font-size:var(--title-size); /* allows adjusting ShagWekker title size */}
 #title-image{
