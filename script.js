@@ -1,34 +1,34 @@
 const DEFAULT_EVENTS = [
   {
-    id: "core-sunrise",
-    time: "07:30",
-    label: "Sunrise Stretch",
-    recurrence: "Daily",
-    description: "Ease into the day with mobility and a mindful check-in.",
-    color: "#6aa2ff"
-  },
-  {
     id: "core-focus",
     time: "10:15",
-    label: "Deep Focus Sprint",
+    label: "Eerste Shaggie Ritueel",
     recurrence: "Daily",
-    description: "Guard a distraction-free block for high-impact work.",
+    description: "Rol een verse shag en neem een diepe trek met je ochtendkoffie.",
     color: "#9b6aff"
   },
   {
     id: "core-lunch",
     time: "12:00",
-    label: "Midday Refuel",
+    label: "Broodje Tabakspraat",
     recurrence: "Daily",
-    description: "Nourish, hydrate, and take a quick movement break.",
+    description: "Lunchpauze op het balkon met een sjekkie en straatpraat.",
     color: "#6affc8"
+  },
+  {
+    id: "core-afternoon",
+    time: "14:30",
+    label: "Middag Shag Shuffle",
+    recurrence: "MonWedThu",
+    description: "Alleen op ma/wo/do: even uitblazen en de middagshag aansteken.",
+    color: "#ffc66a"
   },
   {
     id: "core-wrap",
     time: "16:00",
-    label: "Weekday Wrap",
-    recurrence: "Weekdays",
-    description: "Review highlights, close loops, and sketch tomorrow.",
+    label: "Borrel Shag Afsluiter",
+    recurrence: "MonWedThu",
+    description: "Sluit de dag af met een stevige shag en napraat over de dag.",
     color: "#ff9b6a"
   }
 ];
@@ -130,8 +130,18 @@ function nextWeekendOccurrence(now, time) {
   return target;
 }
 
+function nextSpecificWeekdaysOccurrence(now, time, allowedWeekdays) {
+  const target = nextDailyOccurrence(now, time);
+  while (!allowedWeekdays.includes(target.getDay())) {
+    target.setDate(target.getDate() + 1);
+  }
+  return target;
+}
+
 function nextOccurrenceFor(event, now) {
   switch (event.recurrence) {
+    case "MonWedThu":
+      return nextSpecificWeekdaysOccurrence(now, event.time, [1, 3, 4]);
     case "Weekdays":
       return nextWeekdayOccurrence(now, event.time);
     case "Weekends":
@@ -171,6 +181,8 @@ function getAllEvents(customEvents) {
 
 function recurrenceTag(recurrence) {
   switch (recurrence) {
+    case "MonWedThu":
+      return "Mon/Wed/Thu";
     case "Weekdays":
       return "Weekdays";
     case "Weekends":
