@@ -3,32 +3,188 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ShagWekker</title>
+  <title>ShagWekker · Dynamic day designer</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1 class="ShagWekkerTitel">ShagWekker</h1>
-      <img id="title-image" src="assets/shag.png" alt="Placeholder image" /> <!-- Image placeholder; replace src when ready -->
-      <div id="clock" aria-live="polite" title="Current local time"></div>
+  <div class="page">
+    <header class="site-header" id="top">
+      <div class="brand" aria-label="ShagWekker">
+        <img src="assets/logo-placeholder.svg" alt="Placeholder logo illustration" class="brand__mark" />
+        <div class="brand__text">
+          <span class="brand__name">ShagWekker</span>
+          <span class="brand__tag">Adaptive rhythm planner</span>
+        </div>
+      </div>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="#hero">Home</a>
+        <a href="#planner">Planner</a>
+        <a href="#customize">Customize</a>
+        <a href="#insights">Insights</a>
+      </nav>
+      <div class="header-actions">
+        <button class="btn ghost" id="contrastToggle" type="button" aria-pressed="false">High contrast</button>
+      </div>
     </header>
 
-    <form id="addForm" class="controls" autocomplete="off">
-      <input type="time" id="timeInput" required aria-label="Add time (HH:MM)" />
-      <button type="submit">Add time</button>
-      <button type="button" id="resetBtn" title="Restore defaults">Reset</button>
-    </form>
+    <main>
+      <section class="hero" id="hero">
+        <div class="hero__content">
+          <p class="hero__eyebrow">A flexible routine that bends with your day</p>
+          <h1 class="hero__title">Design a schedule that adapts on the fly</h1>
+          <p class="hero__lead">Craft countdowns, reorder rituals, and let ShagWekker highlight what deserves your focus next. All elements are modular, swappable, and ready for your local assets.</p>
+          <div class="hero__actions">
+            <a class="btn primary" href="#planner">Open planner</a>
+            <button class="btn outline" id="demoButton" type="button">Load demo routine</button>
+          </div>
+        </div>
+        <figure class="hero__media">
+          <img src="assets/hero-placeholder.svg" alt="Placeholder hero artwork" loading="lazy" />
+          <figcaption>Swap this hero illustration by dropping an image in <code>/assets</code>.</figcaption>
+        </figure>
+      </section>
 
-    <section id="defaultSection">
-      <h2>Default Timers</h2>
-      <ul id="defaultList" class="default-list"></ul>
-    </section>
+      <section class="status-grid" aria-label="Today at a glance">
+        <article class="status-card">
+          <header>
+            <h2 class="status-card__title">Next up</h2>
+            <time id="liveClock" aria-live="polite" class="status-card__clock">--:--</time>
+          </header>
+          <p class="status-card__label" id="nextEventName">Waiting for your first cue</p>
+          <p class="status-card__count" id="nextEventCountdown">--h --m --s</p>
+        </article>
+        <article class="status-card">
+          <header>
+            <h2 class="status-card__title">Personal cues</h2>
+          </header>
+          <p class="status-card__label">Active custom reminders</p>
+          <p class="status-card__count" id="customSummaryCount">0</p>
+          <p class="status-card__hint">Create unlimited timers with custom labels and colors.</p>
+        </article>
+        <article class="status-card">
+          <header>
+            <h2 class="status-card__title">Focus suggestion</h2>
+          </header>
+          <p class="status-card__label" id="focusMessage">Add more checkpoints to get tailored nudges.</p>
+          <div class="status-card__swatch">
+            <label for="accentControl">Accent</label>
+            <input type="color" id="accentControl" name="accentControl" value="#6aa2ff" aria-label="Pick accent color" />
+          </div>
+        </article>
+      </section>
 
-    <section id="customSection">
-      <h2>Added Timers</h2>
-      <div id="userCards" class="cards"></div>
-    </section>
+      <section class="planner" id="planner">
+        <div class="planner__primary">
+          <header class="section-header">
+            <div>
+              <p class="section-header__eyebrow">Core cadence</p>
+              <h2>Daily rhythm board</h2>
+            </div>
+            <p class="section-header__hint">These built-in anchors keep your day balanced. Swap artwork by updating <code>/assets</code>.</p>
+          </header>
+          <div id="defaultBoard" class="card-grid" role="list"></div>
+        </div>
+        <aside class="planner__sidebar" aria-label="Upcoming timeline">
+          <header class="section-header">
+            <div>
+              <p class="section-header__eyebrow">What&rsquo;s on deck</p>
+              <h2>Upcoming timeline</h2>
+            </div>
+            <button class="btn ghost" id="precisionToggle" type="button" aria-pressed="false">Compact view</button>
+          </header>
+          <ol id="timelineList" class="timeline" aria-live="polite"></ol>
+        </aside>
+      </section>
+
+      <section class="customize" id="customize">
+        <div class="customize__form">
+          <header class="section-header">
+            <div>
+              <p class="section-header__eyebrow">Make it yours</p>
+              <h2>Create a personal cue</h2>
+            </div>
+            <button class="btn ghost" id="clearCustom" type="button">Clear all</button>
+          </header>
+          <form id="createEventForm" autocomplete="off">
+            <input type="hidden" id="editingId" name="editingId" />
+            <div class="form-field">
+              <label for="labelInput">Label</label>
+              <input id="labelInput" name="label" type="text" required placeholder="e.g. Hydration break" maxlength="32" />
+            </div>
+            <div class="form-row">
+              <div class="form-field">
+                <label for="timeInput">Time</label>
+                <input id="timeInput" name="time" type="time" required />
+              </div>
+              <div class="form-field">
+                <label for="recurrenceSelect">Recurrence</label>
+                <select id="recurrenceSelect" name="recurrence">
+                  <option value="Daily">Daily</option>
+                  <option value="Weekdays">Weekdays</option>
+                  <option value="Weekends">Weekends</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label for="colorInput">Card highlight</label>
+                <input id="colorInput" name="color" type="color" value="#6aa2ff" />
+              </div>
+            </div>
+            <div class="form-field">
+              <label for="notesInput">Notes</label>
+              <textarea id="notesInput" name="notes" rows="3" placeholder="Add an optional intention or checklist." maxlength="120"></textarea>
+            </div>
+            <div class="form-actions">
+              <button class="btn primary" type="submit" id="submitBtn">Save cue</button>
+              <button class="btn ghost" type="button" id="cancelEdit" hidden>Cancel edit</button>
+            </div>
+          </form>
+        </div>
+        <div class="customize__board">
+          <div class="customize__board-header">
+            <h3>Your adaptive deck</h3>
+            <p id="customEmptyState" class="custom-empty">Add your first cue to see it appear here.</p>
+          </div>
+          <div id="customBoard" class="card-grid card-grid--compact" role="list"></div>
+          <figure class="customize__placeholder">
+            <img src="assets/dashboard-placeholder.svg" alt="Placeholder dashboard mockup" loading="lazy" />
+            <figcaption>Drop dashboard screenshots in <code>/assets</code> to replace this panel.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="insights" id="insights">
+        <header class="section-header">
+          <div>
+            <p class="section-header__eyebrow">Pattern explorer</p>
+            <h2>Visualize your cadence</h2>
+          </div>
+          <p class="section-header__hint">Plug analytics or productivity exports into your own visualization here.</p>
+        </header>
+        <div class="insights__grid">
+          <figure class="insights__figure">
+            <img src="assets/insights-placeholder.svg" alt="Placeholder insights graphic" loading="lazy" />
+            <figcaption>Replace this chart with your data-driven story.</figcaption>
+          </figure>
+          <div class="insights__copy">
+            <h3>Keep evolving</h3>
+            <p>Every element of the interface responds to the data structure in <code>script.js</code>. Add new categories, feed live data, or wire this panel into the tools you already love.</p>
+            <ul>
+              <li>Drag and drop hooks are ready for expansion.</li>
+              <li>Timeline items auto-sort and refresh every second.</li>
+              <li>Accent colors cascade across cards and call-to-actions.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>&copy; <span id="footerYear"></span> ShagWekker. Curate your rhythm, then swap these placeholders with bespoke imagery whenever you're ready.</p>
+      <a class="back-to-top" href="#top">Back to top</a>
+    </footer>
   </div>
 
   <script src="script.js"></script>

@@ -1,0 +1,21 @@
+<svg width="520" height="360" viewBox="0 0 520 360" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="dashTitle dashDesc">
+  <title id="dashTitle">Dashboard placeholder</title>
+  <desc id="dashDesc">Panels and widgets indicating customizable space.</desc>
+  <rect width="520" height="360" rx="28" fill="#101832" />
+  <g stroke="#6aa2ff" stroke-dasharray="10 10" stroke-width="3" fill="none" opacity="0.55">
+    <rect x="28" y="28" width="200" height="120" rx="18" />
+    <rect x="260" y="28" width="232" height="120" rx="18" />
+    <rect x="28" y="172" width="180" height="140" rx="18" />
+    <rect x="228" y="172" width="264" height="140" rx="18" />
+  </g>
+  <g fill="#f4f7ff" opacity="0.8">
+    <rect x="48" y="52" width="160" height="16" rx="8" />
+    <rect x="48" y="78" width="120" height="12" rx="6" />
+    <rect x="280" y="56" width="140" height="16" rx="8" />
+    <rect x="280" y="82" width="180" height="12" rx="6" />
+    <rect x="48" y="206" width="120" height="14" rx="7" />
+    <rect x="48" y="230" width="90" height="12" rx="6" />
+    <rect x="250" y="204" width="180" height="14" rx="7" />
+    <rect x="250" y="230" width="140" height="12" rx="6" />
+  </g>
+</svg>
