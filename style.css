@@ -473,6 +473,7 @@ main {
   content: "";
   position: absolute;
   inset: 0;
+  border-radius: inherit;
   background: radial-gradient(
     circle at top right,
     color-mix(in srgb, var(--timeline-accent) 28%, transparent) 0%,
