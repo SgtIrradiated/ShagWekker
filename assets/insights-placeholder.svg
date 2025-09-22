@@ -1,0 +1,23 @@
+<svg width="480" height="320" viewBox="0 0 480 320" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="insightsTitle insightsDesc">
+  <title id="insightsTitle">Insights placeholder</title>
+  <desc id="insightsDesc">Stylized bar and line chart placeholders.</desc>
+  <rect width="480" height="320" rx="24" fill="#0f162d" />
+  <g opacity="0.9">
+    <polyline points="40,250 120,180 200,210 280,150 360,190 440,120" fill="none" stroke="#6aa2ff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" />
+    <g fill="#6aa2ff">
+      <circle cx="40" cy="250" r="6" />
+      <circle cx="120" cy="180" r="6" />
+      <circle cx="200" cy="210" r="6" />
+      <circle cx="280" cy="150" r="6" />
+      <circle cx="360" cy="190" r="6" />
+      <circle cx="440" cy="120" r="6" />
+    </g>
+  </g>
+  <g fill="#b7bfff" opacity="0.4">
+    <rect x="70" y="130" width="36" height="120" rx="10" />
+    <rect x="150" y="160" width="36" height="90" rx="10" />
+    <rect x="230" y="110" width="36" height="140" rx="10" />
+    <rect x="310" y="190" width="36" height="60" rx="10" />
+    <rect x="390" y="150" width="36" height="100" rx="10" />
+  </g>
+</svg>
