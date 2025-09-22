@@ -163,20 +163,103 @@
           </div>
           <p class="section-header__hint">Plug analytics or productivity exports into your own visualization here.</p>
         </header>
-        <div class="insights__grid">
-          <figure class="insights__figure">
-            <img src="assets/insights-placeholder.svg" alt="Placeholder insights graphic" loading="lazy" />
-            <figcaption>Replace this chart with your data-driven story.</figcaption>
-          </figure>
-          <div class="insights__copy">
-            <h3>Keep evolving</h3>
-            <p>Every element of the interface responds to the data structure in <code>script.js</code>. Add new categories, feed live data, or wire this panel into the tools you already love.</p>
-            <ul>
-              <li>Drag and drop hooks are ready for expansion.</li>
-              <li>Timeline items auto-sort and refresh every second.</li>
-              <li>Accent colors cascade across cards and call-to-actions.</li>
-            </ul>
-          </div>
+        <div class="insights__hub" role="list">
+          <a
+            class="insight-tile"
+            href="https://example.com/routine-lab"
+            role="listitem"
+            style="--tile-accent: #6aa2ff"
+          >
+            <span class="insight-tile__glow" aria-hidden="true"></span>
+            <span class="insight-tile__icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                <rect
+                  x="9"
+                  y="9"
+                  width="30"
+                  height="30"
+                  rx="12"
+                  ry="12"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  opacity="0.82"
+                />
+                <path
+                  d="M16 29c2.4-4.6 6.1-7.4 11.2-7.4 3.4 0 5.9 1.6 7.8 3.8"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  opacity="0.9"
+                />
+                <circle cx="20.5" cy="21" r="2.5" fill="currentColor" />
+              </svg>
+            </span>
+            <span class="insight-tile__label">Routine lab</span>
+            <span class="insight-tile__hint">Prototype new cadence flows.</span>
+          </a>
+
+          <a
+            class="insight-tile"
+            href="https://example.com/signal-archive"
+            role="listitem"
+            style="--tile-accent: #9f6aff"
+          >
+            <span class="insight-tile__glow" aria-hidden="true"></span>
+            <span class="insight-tile__icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                <path
+                  d="M12 33.5h24M15.5 24h17M19 14.5h10"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  opacity="0.88"
+                />
+                <circle cx="16" cy="24" r="3" fill="currentColor" opacity="0.88" />
+                <circle cx="32" cy="14.5" r="3" fill="currentColor" opacity="0.88" />
+                <circle cx="24" cy="33.5" r="3.2" fill="currentColor" />
+              </svg>
+            </span>
+            <span class="insight-tile__label">Signal archive</span>
+            <span class="insight-tile__hint">Curate past peaks and dips.</span>
+          </a>
+
+          <a
+            class="insight-tile"
+            href="https://example.com/community-share"
+            role="listitem"
+            style="--tile-accent: #ff7f8c"
+          >
+            <span class="insight-tile__glow" aria-hidden="true"></span>
+            <span class="insight-tile__icon" aria-hidden="true">
+              <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                <path
+                  d="M17.5 18.5c0 3.3-2.6 5.9-5.9 5.9s-5.9-2.6-5.9-5.9 2.6-5.9 5.9-5.9 5.9 2.6 5.9 5.9Zm29.8 11.3c0 3.3-2.6 5.9-5.9 5.9s-5.9-2.6-5.9-5.9 2.6-5.9 5.9-5.9 5.9 2.6 5.9 5.9Zm-11.6-16c0 3.9-3.2 7-7 7s-7-3.2-7-7 3.2-7 7-7 7 3.1 7 7Z"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  opacity="0.9"
+                />
+                <path
+                  d="m15.5 22.4 6.5 3.6m4.1-8.1 5.9 3.3m-4.8 4.8 6.2 3.7"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.6"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  opacity="0.88"
+                />
+              </svg>
+            </span>
+            <span class="insight-tile__label">Community share</span>
+            <span class="insight-tile__hint">Sync with trusted collaborators.</span>
+          </a>
         </div>
       </section>
     </main>
