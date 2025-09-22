@@ -917,9 +917,14 @@ button {
   transition: transform var(--transition), box-shadow var(--transition);
 }
 
-.insight-tile__icon svg {
-  width: 34px;
-  height: 34px;
+.insight-tile__icon svg,
+.insight-tile__icon img {
+  width: 65px;
+  height: 65px;
+}
+
+.insight-tile__icon img {
+  object-fit: contain;
 }
 
 .insight-tile__label {
