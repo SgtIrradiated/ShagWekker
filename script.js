@@ -1,34 +1,34 @@
 const DEFAULT_EVENTS = [
   {
-    id: "core-sunrise",
-    time: "07:30",
-    label: "Sunrise Stretch",
-    recurrence: "Daily",
-    description: "Ease into the day with mobility and a mindful check-in.",
-    color: "#6aa2ff"
-  },
-  {
     id: "core-focus",
     time: "10:15",
-    label: "Deep Focus Sprint",
+    label: "Eerste Shaggie Ritueel",
     recurrence: "Daily",
-    description: "Guard a distraction-free block for high-impact work.",
+    description: "Rol een verse shag en neem een diepe trek met je ochtendkoffie.",
     color: "#9b6aff"
   },
   {
     id: "core-lunch",
     time: "12:00",
-    label: "Midday Refuel",
+    label: "Broodje Tabakspraat",
     recurrence: "Daily",
-    description: "Nourish, hydrate, and take a quick movement break.",
+    description: "Lunchpauze op het balkon met een sjekkie en straatpraat.",
     color: "#6affc8"
+  },
+  {
+    id: "core-afternoon",
+    time: "14:30",
+    label: "Middag Shag Shuffle",
+    recurrence: "MonWedThu",
+    description: "Alleen op ma/wo/do: even uitblazen en de middagshag aansteken.",
+    color: "#ffc66a"
   },
   {
     id: "core-wrap",
     time: "16:00",
-    label: "Weekday Wrap",
-    recurrence: "Weekdays",
-    description: "Review highlights, close loops, and sketch tomorrow.",
+    label: "Borrel Shag Afsluiter",
+    recurrence: "MonWedThu",
+    description: "Sluit de dag af met een stevige shag en napraat over de dag.",
     color: "#ff9b6a"
   }
 ];
@@ -130,8 +130,18 @@ function nextWeekendOccurrence(now, time) {
   return target;
 }
 
+function nextSpecificWeekdaysOccurrence(now, time, allowedWeekdays) {
+  const target = nextDailyOccurrence(now, time);
+  while (!allowedWeekdays.includes(target.getDay())) {
+    target.setDate(target.getDate() + 1);
+  }
+  return target;
+}
+
 function nextOccurrenceFor(event, now) {
   switch (event.recurrence) {
+    case "MonWedThu":
+      return nextSpecificWeekdaysOccurrence(now, event.time, [1, 3, 4]);
     case "Weekdays":
       return nextWeekdayOccurrence(now, event.time);
     case "Weekends":
@@ -171,6 +181,8 @@ function getAllEvents(customEvents) {
 
 function recurrenceTag(recurrence) {
   switch (recurrence) {
+    case "MonWedThu":
+      return "Mon/Wed/Thu";
     case "Weekdays":
       return "Weekdays";
     case "Weekends":
@@ -244,7 +256,11 @@ function renderCustomBoard(container, events, emptyStateEl) {
 
 function buildTimeline(listEl, events, compact) {
   listEl.innerHTML = "";
+  listEl.classList.toggle("timeline--compact", Boolean(compact));
+  listEl.dataset.state = events.length ? "populated" : "empty";
+
   const now = new Date();
+  const dayWindow = 24 * 60 * 60 * 1000;
   const entries = events.map(event => {
     const next = nextOccurrenceFor(event, now);
     const remain = next - now;
@@ -258,22 +274,50 @@ function buildTimeline(listEl, events, compact) {
 
   entries.sort((a, b) => a.remain - b.remain);
   entries.slice(0, 6).forEach(entry => {
+    const accent = entry.event.color || "#6aa2ff";
+    const detail = entry.event.notes?.trim() || entry.event.description || "";
+    const relativeProgress = 1 - Math.max(0, Math.min(1, entry.remain / dayWindow));
+    const progressPercent = relativeProgress <= 0 ? 0 : Math.max(1, Math.round(relativeProgress * 100));
+    const progressLabel = progressPercent <= 0
+      ? "Cue is more than a day away"
+      : `${progressPercent}% of today's rhythm complete before this cue`;
+
     const item = document.createElement("li");
     item.className = "timeline__item";
+    item.dataset.color = accent;
+    item.style.setProperty("--timeline-accent", accent);
     item.innerHTML = `
-      <div class="timeline__header">
-        <p class="timeline__label">${entry.event.label}</p>
-        <span class="timeline__time">${entry.event.time}</span>
+      <div class="timeline__decor" aria-hidden="true">
+        <span class="timeline__dot"></span>
+        <span class="timeline__glow"></span>
       </div>
-      <p class="timeline__count">${recurrenceTag(entry.event.recurrence)} · ${formatCountdown(entry.countdown, compact)}</p>
+      <div class="timeline__body">
+        <header class="timeline__header">
+          <p class="timeline__label">${entry.event.label}</p>
+          <time class="timeline__time" datetime="${entry.event.time}">${entry.event.time}</time>
+        </header>
+        ${detail ? `<p class="timeline__detail">${detail}</p>` : ""}
+        <div class="timeline__meta">
+          <span class="timeline__pill">${recurrenceTag(entry.event.recurrence)}</span>
+          <span class="timeline__count"><span class="timeline__count-label">Next in</span>${formatCountdown(entry.countdown, compact)}</span>
+        </div>
+        <div class="timeline__progress" role="img" aria-label="${progressLabel}">
+          <span style="--fill: ${progressPercent}%"></span>
+        </div>
+      </div>
     `;
     listEl.appendChild(item);
   });
 
   if (!listEl.children.length) {
     const item = document.createElement("li");
-    item.className = "timeline__item";
-    item.textContent = "Add a cue to populate the timeline.";
+    item.className = "timeline__item timeline__item--empty";
+    item.innerHTML = `
+      <div class="timeline__body">
+        <p class="timeline__label">Add a cue to populate the timeline.</p>
+        <p class="timeline__detail">Your saved reminders will animate into this timeline once you create them.</p>
+      </div>
+    `;
     listEl.appendChild(item);
   }
 }
