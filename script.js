@@ -43,9 +43,12 @@ const SUMMARY_MESSAGES = [
 ];
 
 const AUDIO_DIRECTORY = "audio/";
-const AUDIO_MANIFEST = `${AUDIO_DIRECTORY}tracks.json`;
 const AUDIO_EXTENSIONS = [".mp3", ".ogg", ".wav", ".m4a", ".aac", ".flac", ".webm"];
 const AUDIO_PROGRESS_STEPS = 1000;
+// Pas deze lijst aan om vaste tracks te tonen zonder dat er dynamische scanning nodig is.
+const STATIC_AUDIO_REFERENCES = [
+  { src: `${AUDIO_DIRECTORY}audio.mp3`, title: "Audio Pauze Classic" }
+];
 
 const pad = n => String(n).padStart(2, "0");
 const toMinutes = hhmm => {
@@ -133,83 +136,40 @@ function dedupeTracks(tracks) {
   });
 }
 
-async function fetchAudioManifest() {
-  try {
-    const response = await fetch(AUDIO_MANIFEST, { cache: "no-store" });
-    if (!response.ok) {
-      return [];
+const STATIC_AUDIO_LIBRARY = dedupeTracks(
+  STATIC_AUDIO_REFERENCES.map(entry => {
+    if (typeof entry === "string") {
+      return createTrackDescriptor(entry);
     }
-    const manifest = await response.json();
-    const rawList = Array.isArray(manifest) ? manifest : Array.isArray(manifest?.tracks) ? manifest.tracks : [];
-    const parsed = rawList
-      .map(entry => {
-        if (typeof entry === "string") {
-          return createTrackDescriptor(entry);
-        }
-        if (entry && typeof entry === "object") {
-          const reference = entry.src || entry.url || entry.file || entry.path || entry.href;
-          return createTrackDescriptor(reference, entry.title || entry.label || entry.name);
-        }
-        return null;
-      })
-      .filter(Boolean);
-    return dedupeTracks(parsed);
-  } catch (error) {
-    if (error?.name !== "TypeError") {
-      console.info("No audio manifest available", error);
+    if (entry && typeof entry === "object") {
+      const reference = entry.src || entry.url || entry.file || entry.path || entry.href;
+      return createTrackDescriptor(reference, entry.title || entry.label || entry.name);
     }
-  }
-  return [];
-}
-
-function parseDirectoryEntry(href) {
-  if (!href) {
     return null;
-  }
-  const cleaned = href.split("#")[0].split("?")[0];
-  if (!cleaned || cleaned.endsWith("/")) {
-    return null;
-  }
-  try {
-    const base = new URL(AUDIO_DIRECTORY, document.baseURI || window.location.href);
-    const absolute = new URL(cleaned, base);
-    const fileName = sanitizeAudioFileName(absolute.pathname);
-    if (!isAllowedAudioFile(fileName)) {
-      return null;
-    }
-    const relativePath = absolute.pathname.replace(/^\//, "");
-    const url = relativePath.startsWith(AUDIO_DIRECTORY) ? relativePath : `${AUDIO_DIRECTORY}${fileName}`;
-    return { url, label: prettifyTrackLabel(fileName), fileName };
-  } catch (error) {
-    console.warn("Failed to parse audio directory entry", href, error);
-    return null;
-  }
-}
-
-async function fetchAudioDirectoryListing() {
-  try {
-    const response = await fetch(AUDIO_DIRECTORY, { cache: "no-store" });
-    if (!response.ok) {
-      return [];
-    }
-    const text = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(text, "text/html");
-    const anchors = Array.from(doc.querySelectorAll("a[href]"));
-    const tracks = anchors.map(anchor => parseDirectoryEntry(anchor.getAttribute("href"))).filter(Boolean);
-    return dedupeTracks(tracks);
-  } catch (error) {
-    console.warn("Unable to fetch audio directory listing", error);
-    return [];
-  }
-}
+  }).filter(Boolean)
+);
 
 async function discoverAudioTracks() {
-  const manifestTracks = await fetchAudioManifest();
-  if (manifestTracks.length) {
-    return manifestTracks;
+  let configured = [];
+  if (typeof window !== "undefined") {
+    const custom = window.SHAG_AUDIO_TRACKS;
+    if (Array.isArray(custom)) {
+      configured = custom
+        .map(entry => {
+          if (typeof entry === "string") {
+            return createTrackDescriptor(entry);
+          }
+          if (entry && typeof entry === "object") {
+            const reference = entry.src || entry.url || entry.file || entry.path || entry.href;
+            return createTrackDescriptor(reference, entry.title || entry.label || entry.name);
+          }
+          return null;
+        })
+        .filter(Boolean);
+    }
   }
-  return fetchAudioDirectoryListing();
+
+  return dedupeTracks([...configured, ...STATIC_AUDIO_LIBRARY]);
 }
 
 function formatAudioTime(seconds) {
@@ -379,7 +339,7 @@ function initAudioPlayer() {
 
   resetProgress();
   updateDownloadLink(null);
-  setStatus("Zoeken naar audiobestanden...");
+  setStatus("Vaste playlist wordt geladen...");
 
   discoverAudioTracks()
     .then(foundTracks => {
@@ -393,7 +353,7 @@ function initAudioPlayer() {
           emptyStateEl.hidden = false;
         }
         playerEl.dataset.state = "empty";
-        setStatus("Geen audiobestanden gevonden. Voeg bestanden toe aan de audio-map.");
+        setStatus("Geen audiobestanden gevonden. Werk de vaste playlist bij in script.js.");
         updateDownloadLink(null);
       }
     })
@@ -404,7 +364,7 @@ function initAudioPlayer() {
         emptyStateEl.hidden = false;
       }
       playerEl.dataset.state = "error";
-      setStatus("Kon audiobestanden niet laden. Probeer later opnieuw.");
+      setStatus("Kon de vaste playlist niet laden. Controleer je configuratie.");
     });
 
   selectEl.addEventListener("change", event => {
