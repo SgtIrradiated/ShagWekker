@@ -275,26 +275,17 @@
           </p>
         </header>
         <div class="audio-lounge__layout">
-          <div class="audio-lounge__visual" aria-hidden="true">
-            <div class="audio-visualizer">
-              <span class="audio-visualizer__bar" data-visual-bar style="--bar-index: 0"></span>
-              <span class="audio-visualizer__bar" data-visual-bar style="--bar-index: 1"></span>
-              <span class="audio-visualizer__bar" data-visual-bar style="--bar-index: 2"></span>
-              <span class="audio-visualizer__bar" data-visual-bar style="--bar-index: 3"></span>
-              <span class="audio-visualizer__bar" data-visual-bar style="--bar-index: 4"></span>
-              <span class="audio-visualizer__bar" data-visual-bar style="--bar-index: 5"></span>
-              <span class="audio-visualizer__bar" data-visual-bar style="--bar-index: 6"></span>
-              <span class="audio-visualizer__bar" data-visual-bar style="--bar-index: 7"></span>
-              <span class="audio-visualizer__bar" data-visual-bar style="--bar-index: 8"></span>
-            </div>
-            <p class="audio-lounge__motto">Laat de klanken je shagmoment timen.</p>
-          </div>
           <div class="audio-player" data-audio-player>
-            <p class="audio-player__status" data-audio-status>Vaste playlist wordt geladen...</p>
-            <p class="audio-player__empty" data-audio-empty hidden>
-              Voeg je bestanden toe aan de <code>audio/</code>-map en werk de vaste lijst bij in
-              <code>script.js</code> of via <code>window.SHAG_AUDIO_TRACKS</code> in een eigen script.
-            </p>
+            <header class="audio-player__headline">
+              <div>
+                <p class="audio-player__status" data-audio-status>Vaste playlist wordt geladen...</p>
+                <p class="audio-player__empty" data-audio-empty hidden>
+                  Voeg je bestanden toe aan de <code>audio/</code>-map en werk de vaste lijst bij in
+                  <code>script.js</code> of via <code>window.SHAG_AUDIO_TRACKS</code> in een eigen script.
+                </p>
+              </div>
+              <span class="audio-player__signal" aria-hidden="true"></span>
+            </header>
             <label class="audio-player__label" for="audioTrackSelect">Audiobibliotheek</label>
             <div class="audio-player__select">
               <select id="audioTrackSelect" name="audioTrack" data-audio-select disabled>
@@ -332,19 +323,45 @@
               </a>
             </div>
             <div class="audio-player__progress">
-              <span class="audio-player__time" data-audio-current>0:00</span>
-              <input
-                type="range"
-                min="0"
-                max="1000"
-                value="0"
-                step="1"
-                data-audio-progress
-                disabled
-                aria-label="Spoel door de track"
-              />
-              <span class="audio-player__time" data-audio-total>0:00</span>
+              <span class="audio-player__time audio-player__time--current" data-audio-current>0:00</span>
+              <div class="audio-player__progress-track">
+                <input
+                  type="range"
+                  min="0"
+                  max="1000"
+                  value="0"
+                  step="1"
+                  data-audio-progress
+                  disabled
+                  aria-label="Spoel door de track"
+                />
+              </div>
+              <div class="audio-player__volume">
+                <svg class="audio-player__volume-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M5.5 9.5a1 1 0 0 1 1-1H9l2.9-2.32A1 1 0 0 1 13 7v10a1 1 0 0 1-1.58.81L9 15.5H6.5a1 1 0 0 1-1-1Z"
+                  />
+                  <path
+                    d="M16.5 8.5a1 1 0 0 0-1.41 1.42 2.5 2.5 0 0 1 0 3.54A1 1 0 1 0 16.5 14.9a4.5 4.5 0 0 0 0-6.4Z"
+                  />
+                  <path
+                    d="M18.91 6.09a1 1 0 0 0-1.42 1.42 5.5 5.5 0 0 1 0 7.78 1 1 0 0 0 1.42 1.42 7.5 7.5 0 0 0 0-10.62Z"
+                  />
+                </svg>
+                <input
+                  class="audio-player__volume-slider"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value="80"
+                  step="1"
+                  data-audio-volume
+                  aria-label="Volume"
+                />
+              </div>
+              <span class="audio-player__time audio-player__time--total" data-audio-total>0:00</span>
             </div>
+            <p class="audio-player__motto">Laat de klanken je shagmoment timen.</p>
           </div>
         </div>
       </section>

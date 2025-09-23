@@ -230,6 +230,7 @@ function initAudioPlayer() {
   const currentTimeEl = playerEl.querySelector("[data-audio-current]");
   const totalTimeEl = playerEl.querySelector("[data-audio-total]");
   const downloadLink = playerEl.querySelector("[data-audio-download]");
+  const volumeInput = playerEl.querySelector("[data-audio-volume]");
 
   if (
     !selectEl ||
@@ -248,6 +249,8 @@ function initAudioPlayer() {
 
   const audio = new Audio();
   audio.preload = "auto";
+  const DEFAULT_VOLUME = 0.8;
+  audio.volume = DEFAULT_VOLUME;
 
   let tracks = [];
   let activeTrackIndex = -1;
@@ -255,6 +258,14 @@ function initAudioPlayer() {
 
   const setStatus = message => {
     statusEl.textContent = message;
+  };
+
+  const applyVolumeVisual = ratio => {
+    if (!volumeInput) {
+      return;
+    }
+    const clamped = Math.max(0, Math.min(1, ratio));
+    volumeInput.style.setProperty("--audio-volume", `${Math.round(clamped * 100)}%`);
   };
 
   const resetProgress = () => {
@@ -372,6 +383,24 @@ function initAudioPlayer() {
   resetProgress();
   updateDownloadLink(null);
   setStatus("Vaste playlist wordt geladen...");
+
+  if (volumeInput) {
+    const initialValue = Number(volumeInput.value);
+    const normalized = Number.isFinite(initialValue) ? Math.max(0, Math.min(100, initialValue)) / 100 : DEFAULT_VOLUME;
+    audio.volume = normalized;
+    volumeInput.value = String(Math.round(normalized * 100));
+    applyVolumeVisual(normalized);
+
+    const handleVolumeInput = event => {
+      const value = Number(event.target.value);
+      const ratio = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) / 100 : 0;
+      audio.volume = ratio;
+      applyVolumeVisual(ratio);
+    };
+
+    volumeInput.addEventListener("input", handleVolumeInput);
+    volumeInput.addEventListener("change", handleVolumeInput);
+  }
 
   discoverAudioTracks()
     .then(foundTracks => {
