@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShagWekker · Gallery</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="page">
+    <header class="site-header" id="top">
+      <div class="brand" aria-label="ShagWekker">
+        <img src="assets/shag.png" alt="Placeholder logo illustration" class="brand__mark" />
+        <div class="brand__text">
+          <span class="brand__name">ShagWekker</span>
+          <span class="brand__tag">Je kan nooit genoeg Shag roken.</span>
+        </div>
+      </div>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="index.html#hero">Shag</a>
+        <a href="index.html#planner">Nicotineteller</a>
+        <a href="index.html#customize">Inlassen</a>
+        <a href="index.html#insights">Insights</a>
+        <a href="gallery.html" aria-current="page">Gallery</a>
+        <a href="library.html">ShagFiles</a>
+      </nav>
+      <div class="header-actions">
+        <button class="btn ghost" id="contrastToggle" type="button" aria-pressed="false">High contrast</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero gallery-hero" id="hero">
+        <div class="hero__content">
+          <p class="hero__eyebrow">Curate je rookmomenten</p>
+          <h1 class="hero__title">Visual gallery.</h1>
+          <p class="hero__lead">
+            Hieronder wat oogsnoep voor voor je oogballen.
+          </p>
+          <div class="hero__actions">
+            <a class="btn primary" href="#gallery">Bekijk de gallery</a>
+            <a class="btn ghost" href="library.html">Ga naar ShagFiles</a>
+          </div>
+        </div>
+        <figure class="hero__media gallery-hero__media">
+          <div class="gallery-hero__placeholder" aria-hidden="true">
+            <span>Er wordt nog aan ShagWekker gewerkt.</span>
+            <small>Work In Progress</small>
+          </div>
+        </figure>
+      </section>
+
+      <section class="gallery-section" id="gallery" aria-labelledby="gallery-heading">
+        <header class="section-header">
+          <div>
+            <p class="section-header__eyebrow">Visuele collectie</p>
+            <h2 id="gallery-heading">Foton-database</h2>
+          </div>
+          <p class="section-header__hint">Leuke plaatjes om te bezichtigen voor/tijdens je dikke shag</p>
+        </header>
+
+        <div class="gallery-grid" data-gallery role="list"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>&copy; <span id="footerYear"></span> ShagWekker. Shag kun je helaas niet eten, maar wel lekker roken.</p>
+      <a class="back-to-top" href="#top">Back to top</a>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    (function initGallery() {
+      const galleryContainer = document.querySelector("[data-gallery]");
+      if (!galleryContainer) return;
+
+      /**
+       * Gallery-onderhoud tutorial (voor de websitebeheerder):
+       * 1. Voeg je afbeeldingen toe aan de map /assets/gallery/ en onthoud de bestandsnamen.
+       * 2. Dupliceer het object GALLERY_ITEM_TEMPLATE hieronder voor elk nieuw beeld dat je wilt tonen.
+       * 3. Vul per object de src (bijv. "assets/gallery/moment.jpg"), alt-tekst, titel en optionele beschrijving in.
+       * 4. Bewaar het bestand, vernieuw de pagina en controleer of de afbeeldingen correct verschijnen.
+       */
+      const GALLERY_ITEM_TEMPLATE = {
+        title: "Naam van het beeld", // Titel verschijnt onder de afbeelding.
+        description: "Korte toelichting bij het beeld.",
+        src: "assets/gallery/jouw-afbeelding.jpg", // Vervang door het pad naar jouw afbeelding.
+        alt: "Beschrijvende alt-tekst voor toegankelijkheid."
+      };
+
+      const GALLERY_ITEMS = [
+        {
+          ...GALLERY_ITEM_TEMPLATE,
+          title: "Eerste slot",
+          description: "Upload je eerste afbeelding en vul hier een korte toelichting in.",
+          src: "gallery/jottrump.png",
+          alt: "bitchesss"
+        },
+        {
+          ...GALLERY_ITEM_TEMPLATE,
+          title: "Tweede slot",
+          description: "Gebruik dit slot voor een tweede sfeerbeeld of laat het leeg.",
+          src: "gallery/ricardobaba.png",
+          alt: ""
+        },
+		        {
+          ...GALLERY_ITEM_TEMPLATE,
+          title: "Eerste slot",
+          description: "Upload je eerste afbeelding en vul hier een korte toelichting in.",
+          src: "gallery/groep.png",
+          alt: ""
+        },
+      ];
+
+      console.info(
+        "Gallery tutorial:\n1) Upload je afbeeldingen naar /assets/gallery/.\n2) Dupliceer GALLERY_ITEM_TEMPLATE voor ieder nieuw beeld en voeg het toe aan GALLERY_ITEMS.\n3) Herlaad de pagina om het resultaat te zien."
+      );
+
+      GALLERY_ITEMS.forEach((item, index) => {
+        const card = document.createElement("article");
+        card.className = "gallery-card";
+        card.setAttribute("role", "listitem");
+
+        const figure = document.createElement("figure");
+        figure.className = "gallery-card__frame";
+
+        if (item.src) {
+          const image = document.createElement("img");
+          image.src = item.src;
+          image.alt = item.alt || item.title || `Gallery afbeelding ${index + 1}`;
+          figure.appendChild(image);
+        } else {
+          const placeholder = document.createElement("div");
+          placeholder.className = "gallery-card__placeholder";
+          placeholder.innerHTML = `Slot ${index + 1}<br><span>Voeg een src toe in het script.</span>`;
+          figure.appendChild(placeholder);
+        }
+
+        const figcaption = document.createElement("figcaption");
+        figcaption.className = "gallery-card__caption";
+        figcaption.textContent = item.title || `Gallery item ${index + 1}`;
+
+        figure.appendChild(figcaption);
+        card.appendChild(figure);
+
+        if (item.description) {
+          const description = document.createElement("p");
+          description.className = "gallery-card__description";
+          description.textContent = item.description;
+          card.appendChild(description);
+        }
+
+        galleryContainer.appendChild(card);
+      });
+    })();
+  </script>
+</body>
+</html>
