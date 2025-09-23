@@ -419,18 +419,52 @@ function setEditingState(event) {
 }
 
 (function init() {
+  const footerYear = document.getElementById("footerYear");
+  if (footerYear) {
+    footerYear.textContent = new Date().getFullYear();
+  }
+
+  const contrastToggle = document.getElementById("contrastToggle");
+  if (contrastToggle) {
+    contrastToggle.addEventListener("click", () => {
+      const isActive = document.body.classList.toggle("high-contrast");
+      contrastToggle.setAttribute("aria-pressed", String(isActive));
+      contrastToggle.textContent = isActive ? "Default contrast" : "High contrast";
+    });
+  }
+
+  const accentControl = document.getElementById("accentControl");
+  if (accentControl) {
+    setAccentColor(accentControl.value);
+    accentControl.addEventListener("input", event => {
+      setAccentColor(event.target.value);
+    });
+  }
+
   const defaultBoard = document.getElementById("defaultBoard");
   const customBoard = document.getElementById("customBoard");
   const timelineList = document.getElementById("timelineList");
   const customEmptyState = document.getElementById("customEmptyState");
-  const accentControl = document.getElementById("accentControl");
-  const contrastToggle = document.getElementById("contrastToggle");
   const precisionToggle = document.getElementById("precisionToggle");
   const demoButton = document.getElementById("demoButton");
   const clearCustom = document.getElementById("clearCustom");
   const cancelEdit = document.getElementById("cancelEdit");
   const createEventForm = document.getElementById("createEventForm");
-  const footerYear = document.getElementById("footerYear");
+
+  const plannerElementsReady =
+    defaultBoard &&
+    customBoard &&
+    timelineList &&
+    customEmptyState &&
+    precisionToggle &&
+    demoButton &&
+    clearCustom &&
+    cancelEdit &&
+    createEventForm;
+
+  if (!plannerElementsReady) {
+    return;
+  }
 
   let customEvents = loadCustomEvents();
   let compactMode = false;
@@ -443,20 +477,6 @@ function setEditingState(event) {
   };
 
   renderAll();
-
-  footerYear.textContent = new Date().getFullYear();
-
-  setAccentColor(accentControl.value);
-
-  accentControl.addEventListener("input", event => {
-    setAccentColor(event.target.value);
-  });
-
-  contrastToggle.addEventListener("click", () => {
-    const isActive = document.body.classList.toggle("high-contrast");
-    contrastToggle.setAttribute("aria-pressed", String(isActive));
-    contrastToggle.textContent = isActive ? "Default contrast" : "High contrast";
-  });
 
   precisionToggle.addEventListener("click", () => {
     compactMode = !compactMode;
