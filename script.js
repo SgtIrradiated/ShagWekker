@@ -45,6 +45,7 @@ const SUMMARY_MESSAGES = [
 const AUDIO_DIRECTORY = "audio/";
 const AUDIO_EXTENSIONS = [".mp3", ".ogg", ".wav", ".m4a", ".aac", ".flac", ".webm"];
 const AUDIO_PROGRESS_STEPS = 1000;
+const DEFAULT_AUDIO_VOLUME = 75;
 // Pas deze lijst aan om vaste tracks te tonen zonder dat er dynamische scanning nodig is.
 const STATIC_AUDIO_REFERENCES = [
   { src: `${AUDIO_DIRECTORY}Shag Track.flac`, title: "De Shag Trek" },
@@ -227,9 +228,13 @@ function initAudioPlayer() {
   const playButton = playerEl.querySelector("[data-audio-play]");
   const stopButton = playerEl.querySelector("[data-audio-stop]");
   const progressInput = playerEl.querySelector("[data-audio-progress]");
+  const progressWrapper = playerEl.querySelector("[data-audio-progress-wrapper]");
+  const progressPreviewEl = playerEl.querySelector("[data-audio-progress-label]");
   const currentTimeEl = playerEl.querySelector("[data-audio-current]");
   const totalTimeEl = playerEl.querySelector("[data-audio-total]");
   const downloadLink = playerEl.querySelector("[data-audio-download]");
+  const volumeInput = playerEl.querySelector("[data-audio-volume]");
+  const volumeLabelEl = playerEl.querySelector("[data-audio-volume-label]");
 
   if (
     !selectEl ||
@@ -249,9 +254,173 @@ function initAudioPlayer() {
   const audio = new Audio();
   audio.preload = "auto";
 
+  const visualizerBars = Array.from(document.querySelectorAll("[data-visual-bar]"));
+  const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+  const canVisualize = Boolean(AudioContextCtor && visualizerBars.length);
+
+  let audioContext = null;
+  let analyserNode = null;
+  let analyserData = null;
+  let mediaSourceNode = null;
+  let visualizerFrame = null;
+  const visualizerLevels = visualizerBars.map(() => 0.18);
+
   let tracks = [];
   let activeTrackIndex = -1;
   let isSeeking = false;
+
+  const ensureAudioContext = () => {
+    if (!canVisualize) {
+      return false;
+    }
+    if (!audioContext) {
+      try {
+        audioContext = new AudioContextCtor();
+        analyserNode = audioContext.createAnalyser();
+        analyserNode.fftSize = 256;
+        analyserNode.smoothingTimeConstant = 0.7;
+        mediaSourceNode = audioContext.createMediaElementSource(audio);
+        mediaSourceNode.connect(analyserNode);
+        analyserNode.connect(audioContext.destination);
+        analyserData = new Uint8Array(analyserNode.frequencyBinCount);
+      } catch (error) {
+        console.warn("Audio visualizer initialization failed", error);
+        audioContext = null;
+        analyserNode = null;
+        analyserData = null;
+        mediaSourceNode = null;
+        return false;
+      }
+    }
+    if (audioContext && audioContext.state === "suspended") {
+      audioContext.resume().catch(error => {
+        console.warn("AudioContext resume failed", error);
+      });
+    }
+    return Boolean(analyserNode && analyserData);
+  };
+
+  const renderVisualizer = () => {
+    if (!analyserNode || !analyserData || !visualizerBars.length) {
+      return;
+    }
+    analyserNode.getByteFrequencyData(analyserData);
+    const sliceSize = Math.max(1, Math.floor(analyserData.length / visualizerBars.length));
+    visualizerBars.forEach((bar, index) => {
+      const start = index * sliceSize;
+      let sum = 0;
+      for (let i = 0; i < sliceSize && start + i < analyserData.length; i += 1) {
+        sum += analyserData[start + i] || 0;
+      }
+      const average = sliceSize ? sum / sliceSize : analyserData[index] || 0;
+      const normalized = Math.pow(Math.max(0, average) / 255, 0.7);
+      const targetLevel = Math.max(0.08, Math.min(1, normalized));
+      const previousLevel = visualizerLevels[index] ?? 0.18;
+      const eased = previousLevel * 0.6 + targetLevel * 0.4;
+      visualizerLevels[index] = eased;
+      bar.style.setProperty("--bar-scale", eased.toFixed(3));
+    });
+    visualizerFrame = requestAnimationFrame(renderVisualizer);
+  };
+
+  const startVisualizer = () => {
+    if (!ensureAudioContext()) {
+      return;
+    }
+    if (visualizerFrame) {
+      cancelAnimationFrame(visualizerFrame);
+    }
+    visualizerFrame = requestAnimationFrame(renderVisualizer);
+  };
+
+  const stopVisualizer = settleTo => {
+    if (visualizerFrame) {
+      cancelAnimationFrame(visualizerFrame);
+      visualizerFrame = null;
+    }
+    if (!visualizerBars.length) {
+      return;
+    }
+    const target = Math.max(0.06, Math.min(1, Number.isFinite(settleTo) ? settleTo : 0.18));
+    visualizerBars.forEach((bar, index) => {
+      visualizerLevels[index] = target;
+      bar.style.setProperty("--bar-scale", target.toFixed(3));
+    });
+    if (audioContext && audioContext.state === "running" && audio.paused) {
+      audioContext.suspend().catch(() => {});
+    }
+  };
+
+  const updateBuffered = () => {
+    if (!progressInput) {
+      return;
+    }
+    if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
+      progressInput.style.setProperty("--audio-buffered", "0%");
+      return;
+    }
+    let bufferedEnd = 0;
+    try {
+      const ranges = audio.buffered;
+      if (ranges && ranges.length) {
+        bufferedEnd = ranges.end(ranges.length - 1);
+        for (let i = 0; i < ranges.length; i += 1) {
+          const rangeStart = ranges.start(i);
+          const rangeEnd = ranges.end(i);
+          if (rangeStart <= audio.currentTime && audio.currentTime <= rangeEnd) {
+            bufferedEnd = rangeEnd;
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      bufferedEnd = 0;
+    }
+    const ratio = Math.max(0, Math.min(1, bufferedEnd / audio.duration));
+    progressInput.style.setProperty("--audio-buffered", `${(ratio * 100).toFixed(2)}%`);
+  };
+
+  const showPreview = (ratio, timeValue) => {
+    if (!progressWrapper || !progressPreviewEl) {
+      return;
+    }
+    const safeRatio = Math.max(0, Math.min(1, Number(ratio) || 0));
+    const previewTime = Number.isFinite(timeValue)
+      ? timeValue
+      : safeRatio * (Number.isFinite(audio.duration) ? audio.duration : 0);
+    progressWrapper.setAttribute("data-preview-active", "true");
+    progressWrapper.style.setProperty("--preview-position", `${(safeRatio * 100).toFixed(3)}%`);
+    progressPreviewEl.textContent = formatAudioTime(previewTime);
+  };
+
+  const hidePreview = () => {
+    if (progressWrapper) {
+      progressWrapper.setAttribute("data-preview-active", "false");
+      if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
+        progressWrapper.style.setProperty("--preview-position", "0%");
+      }
+    }
+    if (progressPreviewEl) {
+      const baseTime = Number.isFinite(audio.currentTime) ? audio.currentTime : 0;
+      progressPreviewEl.textContent = formatAudioTime(baseTime);
+    }
+  };
+
+  const applyVolume = percent => {
+    const raw = Number.isFinite(percent) ? percent : DEFAULT_AUDIO_VOLUME;
+    const clamped = Math.max(0, Math.min(100, raw));
+    audio.volume = clamped / 100;
+    if (volumeInput) {
+      const rounded = Math.round(clamped);
+      volumeInput.value = String(rounded);
+      volumeInput.style.setProperty("--audio-volume", `${clamped}%`);
+      volumeInput.setAttribute("aria-valuenow", String(rounded));
+      volumeInput.setAttribute("aria-valuetext", `${rounded} procent`);
+    }
+    if (volumeLabelEl) {
+      volumeLabelEl.textContent = `${Math.round(clamped)}%`;
+    }
+  };
 
   const setStatus = message => {
     statusEl.textContent = message;
@@ -261,8 +430,16 @@ function initAudioPlayer() {
     progressInput.value = "0";
     progressInput.disabled = true;
     progressInput.style.setProperty("--audio-progress", "0%");
+    progressInput.style.setProperty("--audio-buffered", "0%");
     currentTimeEl.textContent = "0:00";
     totalTimeEl.textContent = "0:00";
+    if (progressWrapper) {
+      progressWrapper.setAttribute("data-preview-active", "false");
+      progressWrapper.style.setProperty("--preview-position", "0%");
+    }
+    if (progressPreviewEl) {
+      progressPreviewEl.textContent = "0:00";
+    }
   };
 
   const updateDownloadLink = track => {
@@ -293,13 +470,30 @@ function initAudioPlayer() {
   const updateProgress = ended => {
     if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
       progressInput.style.setProperty("--audio-progress", "0%");
+      updateBuffered();
+      if (progressWrapper) {
+        progressWrapper.style.setProperty("--preview-position", "0%");
+      }
+      progressInput.setAttribute("aria-valuetext", "0:00 van 0:00");
       return;
     }
-    const ratio = ended ? 1 : Math.max(0, Math.min(1, audio.currentTime / audio.duration));
+    const currentPosition = ended ? audio.duration : audio.currentTime;
+    const ratio = Math.max(0, Math.min(1, currentPosition / audio.duration));
     progressInput.value = String(Math.round(ratio * AUDIO_PROGRESS_STEPS));
     progressInput.style.setProperty("--audio-progress", `${(ratio * 100).toFixed(2)}%`);
-    currentTimeEl.textContent = formatAudioTime(ended ? audio.duration : audio.currentTime);
+    currentTimeEl.textContent = formatAudioTime(currentPosition);
     totalTimeEl.textContent = formatAudioTime(audio.duration);
+    updateBuffered();
+    if (progressWrapper && progressWrapper.getAttribute("data-preview-active") !== "true") {
+      progressWrapper.style.setProperty("--preview-position", `${(ratio * 100).toFixed(2)}%`);
+      if (progressPreviewEl) {
+        progressPreviewEl.textContent = formatAudioTime(currentPosition);
+      }
+    }
+    progressInput.setAttribute(
+      "aria-valuetext",
+      `${formatAudioTime(currentPosition)} van ${formatAudioTime(audio.duration)}`
+    );
   };
 
   const selectTrack = index => {
@@ -313,6 +507,10 @@ function initAudioPlayer() {
       audio.load();
       activeTrackIndex = -1;
       resetProgress();
+      hidePreview();
+      if (canVisualize) {
+        stopVisualizer(0.08);
+      }
       updateDownloadLink(null);
       setStatus("Selecteer een track om te luisteren.");
       return;
@@ -321,8 +519,12 @@ function initAudioPlayer() {
     const track = tracks[nextIndex];
     const shouldResume = !audio.paused && !audio.ended;
     audio.pause();
+    if (canVisualize) {
+      stopVisualizer(0.08);
+    }
     activeTrackIndex = nextIndex;
     resetProgress();
+    hidePreview();
     updateDownloadLink(track);
     audio.src = track.url;
     audio.load();
@@ -367,7 +569,18 @@ function initAudioPlayer() {
     audio.currentTime = 0;
     updateProgress();
     updatePlayState(false);
+    if (canVisualize) {
+      stopVisualizer(0.08);
+    }
+    hidePreview();
   };
+
+  applyVolume(volumeInput ? Number(volumeInput.value) : DEFAULT_AUDIO_VOLUME);
+  if (volumeInput) {
+    volumeInput.addEventListener("input", event => {
+      applyVolume(Number(event.target.value));
+    });
+  }
 
   resetProgress();
   updateDownloadLink(null);
@@ -416,6 +629,9 @@ function initAudioPlayer() {
       selectTrack(0);
     }
     if (audio.paused || audio.ended) {
+      if (canVisualize) {
+        ensureAudioContext();
+      }
       audio
         .play()
         .then(() => {
@@ -445,34 +661,54 @@ function initAudioPlayer() {
   });
 
   progressInput.addEventListener("input", () => {
+    const ratio = Number(progressInput.value) / AUDIO_PROGRESS_STEPS;
+    progressInput.style.setProperty("--audio-progress", `${(ratio * 100).toFixed(2)}%`);
     if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
+      showPreview(ratio, 0);
+      progressInput.setAttribute("aria-valuetext", "0:00 van 0:00");
       return;
     }
     isSeeking = true;
-    const ratio = Number(progressInput.value) / AUDIO_PROGRESS_STEPS;
     const targetTime = ratio * audio.duration;
     currentTimeEl.textContent = formatAudioTime(targetTime);
-    progressInput.style.setProperty("--audio-progress", `${(ratio * 100).toFixed(2)}%`);
+    progressInput.setAttribute(
+      "aria-valuetext",
+      `${formatAudioTime(targetTime)} van ${formatAudioTime(audio.duration)}`
+    );
+    showPreview(ratio, targetTime);
   });
 
   const endSeeking = () => {
     if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
       isSeeking = false;
+      hidePreview();
       return;
     }
     const ratio = Number(progressInput.value) / AUDIO_PROGRESS_STEPS;
     audio.currentTime = ratio * audio.duration;
     isSeeking = false;
+    hidePreview();
   };
 
   progressInput.addEventListener("change", endSeeking);
   progressInput.addEventListener("mouseup", endSeeking);
   progressInput.addEventListener("touchend", endSeeking, { passive: true });
+  progressInput.addEventListener("touchcancel", endSeeking, { passive: true });
+  progressInput.addEventListener("blur", () => {
+    isSeeking = false;
+    hidePreview();
+  });
 
   audio.addEventListener("loadedmetadata", () => {
     progressInput.disabled = false;
     updateProgress();
+    updateBuffered();
   });
+
+  audio.addEventListener("loadeddata", updateBuffered);
+  audio.addEventListener("progress", updateBuffered);
+  audio.addEventListener("stalled", updateBuffered);
+  audio.addEventListener("waiting", updateBuffered);
 
   audio.addEventListener("timeupdate", () => {
     if (isSeeking) {
@@ -486,6 +722,9 @@ function initAudioPlayer() {
     if (activeTrackIndex >= 0) {
       setStatus(`Aan het spelen: ${tracks[activeTrackIndex].label}`);
     }
+    if (canVisualize) {
+      startVisualizer();
+    }
   });
 
   audio.addEventListener("pause", () => {
@@ -496,6 +735,10 @@ function initAudioPlayer() {
     if (activeTrackIndex >= 0) {
       setStatus(`Gepauzeerd: ${tracks[activeTrackIndex].label}`);
     }
+    if (canVisualize) {
+      stopVisualizer(0.18);
+    }
+    hidePreview();
   });
 
   audio.addEventListener("ended", () => {
@@ -506,17 +749,29 @@ function initAudioPlayer() {
     } else {
       setStatus("Track afgelopen.");
     }
+    if (canVisualize) {
+      stopVisualizer(0.08);
+    }
+    hidePreview();
   });
 
   audio.addEventListener("emptied", () => {
     resetProgress();
     updatePlayState(false);
+    if (canVisualize) {
+      stopVisualizer(0.08);
+    }
+    hidePreview();
   });
 
   audio.addEventListener("error", event => {
     console.warn("Audio error", event);
     updatePlayState(false);
     resetProgress();
+    if (canVisualize) {
+      stopVisualizer(0.08);
+    }
+    hidePreview();
     setStatus("Kan de geselecteerde track niet afspelen.");
   });
 }
