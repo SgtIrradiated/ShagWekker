@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShagWekker · Resource library</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="page">
+    <header class="site-header" id="top">
+      <div class="brand" aria-label="ShagWekker">
+        <img src="assets/shag.png" alt="Placeholder logo illustration" class="brand__mark" />
+        <div class="brand__text">
+          <span class="brand__name">ShagWekker</span>
+          <span class="brand__tag">Je kan nooit genoeg Shag roken.</span>
+        </div>
+      </div>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="index.html#hero">Shag</a>
+        <a href="index.html#planner">Nicotineteller</a>
+        <a href="index.html#customize">Inlassen</a>
+        <a href="index.html#insights">Insights</a>
+        <a href="library.html" aria-current="page">ShagFiles</a>
+      </nav>
+      <div class="header-actions">
+        <button class="btn ghost" id="contrastToggle" type="button" aria-pressed="false">High contrast</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero library-hero" id="hero">
+        <div class="hero__content">
+          <p class="hero__eyebrow">Altijd binnen handbereik</p>
+          <h1 class="hero__title">Resource library.</h1>
+          <p class="hero__lead">
+            Vind hier je toekomstige sjekkie-hand-outs, gidsen en templates. Elk kaartje linkt naar een bestand in je
+            <code>/files</code>-map zodat je ze later kunt delen of downloaden.
+          </p>
+          <div class="hero__actions">
+            <a class="btn primary" href="#downloads">Browse downloads</a>
+            <a class="btn ghost" href="index.html#planner">Back to planner</a>
+          </div>
+        </div>
+        <figure class="hero__media">
+          <img src="assets/dashboard-placeholder.svg" alt="Resource preview illustration" loading="lazy" />
+          <figcaption>Vervang de afbeelding met je eigen library visual in <code>/assets</code>.</figcaption>
+        </figure>
+      </section>
+
+      <section class="resource-section" id="downloads" aria-labelledby="downloads-heading">
+        <header class="section-header">
+          <div>
+            <p class="section-header__eyebrow">Downloads</p>
+            <h2 id="downloads-heading">Kant-en-klare sjekkie content</h2>
+          </div>
+          <p class="section-header__hint">Plaats je bestanden in de map <code>/files</code> en update de bestandsnamen wanneer je ze klaar hebt.</p>
+        </header>
+
+        <div class="resource-grid" role="list">
+          <article class="resource-card" role="listitem">
+            <span class="resource-card__badge">PDF</span>
+            <h3 class="resource-card__title">Geert Wilders Picca</h3>
+            <p class="resource-card__meta">Start je dag met een rookplan dat werkt.</p>
+            <div class="resource-card__actions">
+              <a class="btn download" href="files/1200px-Geert_Wilders-187607807.jpg">Open bestand</a>
+            </div>
+          </article>
+
+          <article class="resource-card" role="listitem">
+            <span class="resource-card__badge">.ZIP</span>
+            <h3 class="resource-card__title">Wilders Zip</h3>
+            <p class="resource-card__meta">Wilders.zip</p>
+            <div class="resource-card__actions">
+              <a class="btn download" href="files/rotbek.zip">Downieload</a>
+            </div>
+          </article>
+
+          <article class="resource-card" role="listitem">
+            <span class="resource-card__badge">.ZIP</span>
+            <h3 class="resource-card__title">.</h3>
+            <p class="resource-card__meta">.</p>
+            <div class="resource-card__actions">
+              <a class="btn download" href="assets/shag.png">Download</a>
+            </div>
+          </article>
+
+          <article class="resource-card" role="listitem">
+            <span class="resource-card__badge">PDF</span>
+            <h3 class="resource-card__title">Rookpauze poster</h3>
+            <p class="resource-card__meta">Hang een poster op met jouw beste pauzetijden.</p>
+            <div class="resource-card__actions">
+              <a class="btn download" href="files/rookpauze-poster.pdf">Open bestand</a>
+            </div>
+          </article>
+
+          <article class="resource-card" role="listitem">
+            <span class="resource-card__badge">ZIP</span>
+            <h3 class="resource-card__title">Sjabloon pakket</h3>
+            <p class="resource-card__meta">Alle wekker assets gebundeld voor snelle installatie.</p>
+            <div class="resource-card__actions">
+              <a class="btn download" href="files/sjabloon-pakket.zip">Open bestand</a>
+            </div>
+          </article>
+
+          <article class="resource-card" role="listitem">
+            <span class="resource-card__badge">MP3</span>
+            <h3 class="resource-card__title">Wake-up jingle</h3>
+            <p class="resource-card__meta">Voeg een iconische tune toe aan je shagmoment.</p>
+            <div class="resource-card__actions">
+              <a class="btn download" href="files/wakeup-jingle.mp3">Open bestand</a>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="resource-section resource-section--secondary" aria-labelledby="sharing-heading">
+        <header class="section-header">
+          <div>
+            <p class="section-header__eyebrow">Tips</p>
+            <h2 id="sharing-heading">Bestanden klaarzetten</h2>
+          </div>
+          <p class="section-header__hint">Vervang de bestandsnamen zodra je echte documenten hebt. De knoppen blijven automatisch werken.</p>
+        </header>
+
+        <div class="resource-guidance">
+          <article class="resource-note">
+            <h3>1. Voeg bestanden toe</h3>
+            <p>Plaats je documenten in de map <code>/files</code>. Maak eventueel submappen aan om alles georganiseerd te houden.</p>
+          </article>
+          <article class="resource-note">
+            <h3>2. Update labels</h3>
+            <p>Pas de titels aan zodat gebruikers begrijpen wat ze openen. Je kunt kaarten dupliceren voor extra downloads.</p>
+          </article>
+          <article class="resource-note">
+            <h3>3. Deel de link</h3>
+            <p>Verwijs gebruikers via deze pagina. Ze kunnen de downloads direct openen of opslaan voor later.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>&copy; <span id="footerYear"></span> ShagWekker. Shag kun je helaas niet eten, maar wel lekker roken.</p>
+      <a class="back-to-top" href="#top">Back to top</a>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
