@@ -60,7 +60,7 @@
             <p class="section-header__eyebrow">Visuele collectie</p>
             <h2 id="gallery-heading">Beelden klaarzetten</h2>
           </div>
-          <p class="section-header__hint">Werk met maximaal twee slots. Vervang de placeholders zodra je echte afbeeldingen hebt.</p>
+          <p class="section-header__hint">Dupliceer het voorbeeldobject in het script om zoveel slots toe te voegen als je nodig hebt.</p>
         </header>
 
         <div class="gallery-grid" data-gallery role="list"></div>
@@ -82,27 +82,36 @@
       /**
        * Gallery-onderhoud tutorial (voor de websitebeheerder):
        * 1. Voeg je afbeeldingen toe aan de map /assets/gallery/ en onthoud de bestandsnamen.
-       * 2. Vul hieronder voor elk object in GALLERY_ITEMS de src (bijv. "assets/gallery/moment.jpg"), alt-tekst en optionele beschrijving in.
-       * 3. Bewaar het bestand, vernieuw de pagina en controleer of de afbeeldingen correct verschijnen.
-       * 4. Wil je meer beelden tonen? Dupliceer dan een object binnen de array en zorg dat je maximaal twee actieve slots behoudt.
+       * 2. Dupliceer het object GALLERY_ITEM_TEMPLATE hieronder voor elk nieuw beeld dat je wilt tonen.
+       * 3. Vul per object de src (bijv. "assets/gallery/moment.jpg"), alt-tekst, titel en optionele beschrijving in.
+       * 4. Bewaar het bestand, vernieuw de pagina en controleer of de afbeeldingen correct verschijnen.
        */
+      const GALLERY_ITEM_TEMPLATE = {
+        title: "Naam van het beeld", // Titel verschijnt onder de afbeelding.
+        description: "Korte toelichting bij het beeld.",
+        src: "assets/gallery/jouw-afbeelding.jpg", // Vervang door het pad naar jouw afbeelding.
+        alt: "Beschrijvende alt-tekst voor toegankelijkheid."
+      };
+
       const GALLERY_ITEMS = [
         {
-          title: "Eerste slot", // Verander de titel zodat hij het beeld beschrijft.
+          ...GALLERY_ITEM_TEMPLATE,
+          title: "Eerste slot",
           description: "Upload je eerste afbeelding en vul hier een korte toelichting in.",
-          src: "", // Voeg hier het pad naar het bestand toe, bijvoorbeeld "assets/gallery/ochtendritueel.jpg".
+          src: "",
           alt: ""
         },
         {
+          ...GALLERY_ITEM_TEMPLATE,
           title: "Tweede slot",
           description: "Gebruik dit slot voor een tweede sfeerbeeld of laat het leeg.",
           src: "",
           alt: ""
         }
-      ].slice(0, 2);
+      ];
 
       console.info(
-        "Gallery tutorial:\n1) Upload je afbeelding naar /assets/gallery/.\n2) Werk de GALLERY_ITEMS-array in gallery.html bij.\n3) Herlaad de pagina om het resultaat te zien."
+        "Gallery tutorial:\n1) Upload je afbeeldingen naar /assets/gallery/.\n2) Dupliceer GALLERY_ITEM_TEMPLATE voor ieder nieuw beeld en voeg het toe aan GALLERY_ITEMS.\n3) Herlaad de pagina om het resultaat te zien."
       );
 
       GALLERY_ITEMS.forEach((item, index) => {
