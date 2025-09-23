@@ -47,7 +47,9 @@ const AUDIO_EXTENSIONS = [".mp3", ".ogg", ".wav", ".m4a", ".aac", ".flac", ".web
 const AUDIO_PROGRESS_STEPS = 1000;
 // Pas deze lijst aan om vaste tracks te tonen zonder dat er dynamische scanning nodig is.
 const STATIC_AUDIO_REFERENCES = [
-  { src: `${AUDIO_DIRECTORY}audio.mp3`, title: "Audio Pauze Classic" }
+  { src: `${AUDIO_DIRECTORY}audio.mp3`, title: "Blije Man" },
+  { src:  `${AUDIO_DIRECTORY}nicotinerzshy.mp3`, title: "Donaldy Trumpowich" },
+  { src:  `${AUDIO_DIRECTORY}blyat.mp3`, title: "Blyat" }
 ];
 
 const PREFERENCE_KEYS = {
