@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShagWekker · File Repository</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="page">
+    <header class="site-header" id="top">
+      <div class="brand" aria-label="ShagWekker">
+        <img src="assets/shag.png" alt="Placeholder logo illustration" class="brand__mark" />
+        <div class="brand__text">
+          <span class="brand__name">ShagWekker</span>
+          <span class="brand__tag">Je kan nooit genoeg Shag roken.</span>
+        </div>
+      </div>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="index.html#hero">Home</a>
+        <a href="index.html#planner">Planner</a>
+        <a href="index.html#customize">Customize</a>
+        <a href="index.html#insights">Insights</a>
+        <a href="repository.html" aria-current="page">Repository</a>
+      </nav>
+      <div class="header-actions">
+        <button class="btn ghost" id="contrastToggle" type="button" aria-pressed="false">High contrast</button>
+      </div>
+    </header>
+
+    <main class="repository-main">
+      <section class="repository-hero" id="repositoryHero">
+        <div class="repository-hero__content">
+          <p class="hero__eyebrow">Bestanden bij de hand</p>
+          <h1 class="repository-hero__title">Jouw ShagWekker archief.</h1>
+          <p class="repository-hero__lead">
+            Upload assets, documenten of screenshots rechtstreeks naar de servermap en maak ze direct beschikbaar
+            voor het team. Bestanden worden automatisch gesorteerd en blijven klaar voor download.
+          </p>
+          <div class="repository-hero__meta">
+            <div class="repository-hero__meta-card">
+              <span class="repository-hero__meta-label">Opslaglocatie</span>
+              <span class="repository-hero__meta-value">/uploads</span>
+            </div>
+            <div class="repository-hero__meta-card">
+              <span class="repository-hero__meta-label">Status</span>
+              <span class="repository-hero__meta-value" id="repositoryStatus">Live sync</span>
+            </div>
+          </div>
+        </div>
+        <figure class="repository-hero__media" aria-hidden="true">
+          <div class="repository-hero__orb"></div>
+          <div class="repository-hero__orb repository-hero__orb--accent"></div>
+        </figure>
+      </section>
+
+      <section class="repository-upload" aria-labelledby="uploadHeading">
+        <div class="repository-upload__panel">
+          <header class="section-header">
+            <div>
+              <p class="section-header__eyebrow">Uploadcentrum</p>
+              <h2 id="uploadHeading">Voeg nieuwe bestanden toe</h2>
+            </div>
+            <button class="btn ghost" type="button" id="refreshButton">Vernieuw lijst</button>
+          </header>
+          <form id="uploadForm" class="upload-form" autocomplete="off">
+            <div class="upload-dropzone" id="uploadDropzone" tabindex="0">
+              <div class="upload-dropzone__icon" aria-hidden="true">⬆️</div>
+              <div class="upload-dropzone__text">
+                <strong>Sleep bestanden hierheen</strong>
+                <span>of klik om te bladeren.</span>
+              </div>
+              <input id="fileInput" class="upload-dropzone__input" type="file" name="files" multiple aria-label="Selecteer bestanden om te uploaden" />
+            </div>
+            <div class="upload-actions">
+              <p class="upload-hint">Ondersteunt alle bestandsformaten tot 50 MB per bestand.</p>
+              <button class="btn primary" type="submit">Bestanden uploaden</button>
+            </div>
+            <p class="upload-status" id="uploadStatus" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </section>
+
+      <section class="repository-files" aria-labelledby="filesHeading">
+        <header class="section-header">
+          <div>
+            <p class="section-header__eyebrow">Beschikbare bestanden</p>
+            <h2 id="filesHeading">Repository overzicht</h2>
+          </div>
+        </header>
+        <div id="fileList" class="file-grid" role="list"></div>
+        <div id="fileEmptyState" class="file-empty" hidden>
+          <p>Geen bestanden gevonden. Upload je eerste document om het overzicht te vullen.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>&copy; <span id="footerYear"></span> ShagWekker. Shag kun je helaas niet eten, maar wel lekker roken.</p>
+      <a class="back-to-top" href="#top">Back to top</a>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+  <script src="repository.js"></script>
+</body>
+</html>

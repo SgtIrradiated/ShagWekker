@@ -419,18 +419,52 @@ function setEditingState(event) {
 }
 
 (function init() {
+  const footerYear = document.getElementById("footerYear");
+  if (footerYear) {
+    footerYear.textContent = new Date().getFullYear();
+  }
+
+  const contrastToggle = document.getElementById("contrastToggle");
+  if (contrastToggle) {
+    const syncContrastToggle = () => {
+      const isActive = document.body.classList.contains("high-contrast");
+      contrastToggle.setAttribute("aria-pressed", String(isActive));
+      contrastToggle.textContent = isActive ? "Default contrast" : "High contrast";
+    };
+
+    contrastToggle.addEventListener("click", () => {
+      document.body.classList.toggle("high-contrast");
+      syncContrastToggle();
+    });
+
+    syncContrastToggle();
+  }
+
   const defaultBoard = document.getElementById("defaultBoard");
   const customBoard = document.getElementById("customBoard");
   const timelineList = document.getElementById("timelineList");
   const customEmptyState = document.getElementById("customEmptyState");
   const accentControl = document.getElementById("accentControl");
-  const contrastToggle = document.getElementById("contrastToggle");
   const precisionToggle = document.getElementById("precisionToggle");
   const demoButton = document.getElementById("demoButton");
   const clearCustom = document.getElementById("clearCustom");
   const cancelEdit = document.getElementById("cancelEdit");
   const createEventForm = document.getElementById("createEventForm");
-  const footerYear = document.getElementById("footerYear");
+
+  if (
+    !defaultBoard ||
+    !customBoard ||
+    !timelineList ||
+    !customEmptyState ||
+    !accentControl ||
+    !precisionToggle ||
+    !demoButton ||
+    !clearCustom ||
+    !cancelEdit ||
+    !createEventForm
+  ) {
+    return;
+  }
 
   let customEvents = loadCustomEvents();
   let compactMode = false;
@@ -444,18 +478,10 @@ function setEditingState(event) {
 
   renderAll();
 
-  footerYear.textContent = new Date().getFullYear();
-
   setAccentColor(accentControl.value);
 
   accentControl.addEventListener("input", event => {
     setAccentColor(event.target.value);
-  });
-
-  contrastToggle.addEventListener("click", () => {
-    const isActive = document.body.classList.toggle("high-contrast");
-    contrastToggle.setAttribute("aria-pressed", String(isActive));
-    contrastToggle.textContent = isActive ? "Default contrast" : "High contrast";
   });
 
   precisionToggle.addEventListener("click", () => {

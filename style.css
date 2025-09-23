@@ -677,6 +677,323 @@ main {
   }
 }
 
+/* Repository page */
+.repository-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2.5rem, 5vw, 4.5rem);
+  padding: clamp(1.5rem, 4vw, 3.5rem);
+}
+
+.repository-hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--grid-gap);
+  align-items: center;
+  padding: clamp(2rem, 5vw, 3.75rem);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, rgba(39, 64, 140, 0.65), rgba(16, 26, 68, 0.85));
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  overflow: hidden;
+}
+
+.repository-hero__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  position: relative;
+  z-index: 1;
+}
+
+.repository-hero__title {
+  font-size: clamp(2rem, 5vw, 2.8rem);
+  margin: 0;
+}
+
+.repository-hero__lead {
+  margin: 0;
+  color: var(--muted);
+  max-width: 60ch;
+}
+
+.repository-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.repository-hero__meta-card {
+  padding: 0.85rem 1.2rem;
+  background: rgba(8, 14, 32, 0.6);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: var(--shadow-md);
+  min-width: 160px;
+}
+
+.repository-hero__meta-label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.repository-hero__meta-value {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.repository-hero__media {
+  position: relative;
+  min-height: 200px;
+}
+
+.repository-hero__orb {
+  position: absolute;
+  inset: 10%;
+  border-radius: 999px;
+  background: radial-gradient(circle at center, rgba(255, 255, 255, 0.25), transparent 60%);
+  filter: blur(0);
+  transform: rotate(12deg);
+}
+
+.repository-hero__orb--accent {
+  inset: 0;
+  background: radial-gradient(circle at center, rgba(106, 162, 255, 0.4), transparent 65%);
+  mix-blend-mode: screen;
+}
+
+.repository-upload__panel,
+.repository-files {
+  background: var(--surface-strong);
+  border-radius: var(--radius-lg);
+  padding: clamp(1.75rem, 4vw, 3rem);
+  box-shadow: var(--shadow-xl);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.upload-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.upload-dropzone {
+  position: relative;
+  border: 2px dashed rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-lg);
+  background: rgba(6, 12, 30, 0.6);
+  padding: clamp(2rem, 4vw, 3rem);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition), transform var(--transition);
+  outline: none;
+}
+
+.upload-dropzone:is(:focus-visible, .is-active) {
+  border-color: var(--accent);
+  background: rgba(20, 36, 80, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 25px 40px rgba(5, 10, 30, 0.45);
+}
+
+.upload-dropzone__icon {
+  font-size: 2.8rem;
+}
+
+.upload-dropzone__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 1rem;
+}
+
+.upload-dropzone__text strong {
+  font-size: 1.1rem;
+}
+
+.upload-dropzone__input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.upload-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.upload-hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.upload-status {
+  margin: 0;
+  font-size: 0.95rem;
+  min-height: 1.5rem;
+  color: var(--muted);
+  transition: color var(--transition);
+}
+
+.upload-status[data-tone="success"] {
+  color: var(--success);
+}
+
+.upload-status[data-tone="error"] {
+  color: var(--danger);
+}
+
+.upload-status[data-tone="warning"] {
+  color: #ffd56a;
+}
+
+.upload-form.is-uploading .btn.primary {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--grid-gap);
+}
+
+.file-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  gap: 0.75rem 1rem;
+  padding: 1.5rem;
+  border-radius: var(--radius-md);
+  background: rgba(8, 12, 28, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+}
+
+.file-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: radial-gradient(circle at top left, rgba(106, 162, 255, 0.25), transparent 60%);
+  opacity: 0;
+  transition: opacity var(--transition);
+  pointer-events: none;
+}
+
+.file-card:hover,
+.file-card:focus-within {
+  transform: translateY(-4px);
+  box-shadow: 0 30px 40px rgba(5, 10, 30, 0.5);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.file-card:hover::before,
+.file-card:focus-within::before {
+  opacity: 1;
+}
+
+.file-card__icon {
+  grid-row: span 2;
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 2rem;
+  box-shadow: var(--shadow-md);
+}
+
+.file-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.file-card__name {
+  margin: 0;
+  font-weight: 600;
+  font-size: 1.05rem;
+  word-break: break-word;
+}
+
+.file-card__meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.file-card__badge {
+  align-self: flex-start;
+  justify-self: flex-start;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.file-card__download {
+  grid-column: 1 / -1;
+  justify-self: flex-start;
+}
+
+.file-empty {
+  margin: 0;
+  padding: 2rem;
+  text-align: center;
+  border-radius: var(--radius-md);
+  background: rgba(8, 12, 28, 0.6);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  color: var(--muted);
+}
+
+.file-grid.is-loading {
+  opacity: 0.6;
+  filter: blur(1px);
+}
+
+@media (max-width: 720px) {
+  .upload-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .file-card {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+
+  .file-card__icon {
+    grid-row: auto;
+    width: 64px;
+    height: 64px;
+    margin-bottom: 0.5rem;
+  }
+
+  .file-card__download {
+    width: 100%;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .timeline__item {
     transition: none;
