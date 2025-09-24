@@ -55,8 +55,12 @@ const STATIC_AUDIO_REFERENCES = [
   { src: `${AUDIO_DIRECTORY}blyat.mp3`, title: "Blyat" }
 ];
 
+const DEFAULT_ACCENT_COLOR = "#ff0000";
+const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
+
 const PREFERENCE_KEYS = {
-  highContrast: "shagwekker.preferences.highContrast"
+  highContrast: "shagwekker.preferences.highContrast",
+  accentColor: "shagwekker.preferences.accentColor"
 };
 
 function readStoredPreference(key) {
@@ -80,6 +84,37 @@ function writeStoredPreference(key, value) {
   } catch (error) {
     console.warn(`Unable to persist preference "${key}"`, error);
   }
+}
+
+function normalizeHexColor(value) {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  if (HEX_COLOR_PATTERN.test(trimmed)) {
+    return trimmed.toLowerCase();
+  }
+  return null;
+}
+
+function resolveHexColor(value, fallback = DEFAULT_ACCENT_COLOR) {
+  return normalizeHexColor(value) ?? fallback;
+}
+
+function getCurrentAccentColor() {
+  const inline = normalizeHexColor(document.documentElement.style.getPropertyValue("--accent"));
+  if (inline) {
+    return inline;
+  }
+  if (typeof window !== "undefined" && typeof window.getComputedStyle === "function") {
+    const computed = normalizeHexColor(
+      window.getComputedStyle(document.documentElement).getPropertyValue("--accent")
+    );
+    if (computed) {
+      return computed;
+    }
+  }
+  return DEFAULT_ACCENT_COLOR;
 }
 
 const pad = n => String(n).padStart(2, "0");
@@ -572,7 +607,7 @@ function loadCustomEvents() {
           time,
           label: `Legacy cue ${idx + 1}`,
           recurrence: "Daily",
-          color: "#6aa2ff",
+          color: DEFAULT_ACCENT_COLOR,
           notes: "Imported from the previous version."
         }));
         saveCustomEvents(migrated);
@@ -594,7 +629,7 @@ function normalizeCustomEvents(events) {
       time: typeof evt.time === "string" ? evt.time : "12:00",
       label: typeof evt.label === "string" && evt.label.trim() ? evt.label.trim() : "Untitled cue",
       recurrence: ["Daily", "Weekdays", "Weekends"].includes(evt.recurrence) ? evt.recurrence : "Daily",
-      color: typeof evt.color === "string" ? evt.color : "#6aa2ff",
+      color: resolveHexColor(evt.color),
       notes: typeof evt.notes === "string" ? evt.notes.trim() : ""
     }))
     .sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
@@ -778,7 +813,7 @@ function buildTimeline(listEl, events, compact) {
 
   entries.sort((a, b) => a.remain - b.remain);
   entries.slice(0, 6).forEach(entry => {
-    const accent = entry.event.color || "#6aa2ff";
+    const accent = resolveHexColor(entry.event.color, getCurrentAccentColor());
     const detail = entry.event.notes?.trim() || entry.event.description || "";
     const relativeProgress = 1 - Math.max(0, Math.min(1, entry.remain / dayWindow));
     const progressPercent = relativeProgress <= 0 ? 0 : Math.max(1, Math.round(relativeProgress * 100));
@@ -886,8 +921,12 @@ function updateCountdowns(events, compact) {
   return now;
 }
 
-function setAccentColor(color) {
-  document.documentElement.style.setProperty("--accent", color);
+function setAccentColor(color, { persist = false } = {}) {
+  const resolved = resolveHexColor(color);
+  document.documentElement.style.setProperty("--accent", resolved);
+  if (persist) {
+    writeStoredPreference(PREFERENCE_KEYS.accentColor, resolved);
+  }
 }
 
 function setEditingState(event) {
@@ -905,7 +944,7 @@ function setEditingState(event) {
     labelInput.value = "";
     timeInput.value = "";
     recurrenceSelect.value = "Daily";
-    colorInput.value = document.documentElement.style.getPropertyValue("--accent") || "#6aa2ff";
+    colorInput.value = getCurrentAccentColor();
     notesInput.value = "";
     cancelEdit.hidden = true;
     submitBtn.textContent = "Save cue";
@@ -916,7 +955,7 @@ function setEditingState(event) {
   labelInput.value = event.label;
   timeInput.value = event.time;
   recurrenceSelect.value = event.recurrence;
-  colorInput.value = event.color || "#6aa2ff";
+  colorInput.value = resolveHexColor(event.color, getCurrentAccentColor());
   notesInput.value = event.notes || "";
   cancelEdit.hidden = false;
   submitBtn.textContent = "Update cue";
@@ -949,10 +988,15 @@ function setEditingState(event) {
   }
 
   const accentControl = document.getElementById("accentControl");
+  const storedAccentPreference = readStoredPreference(PREFERENCE_KEYS.accentColor);
+  const initialAccent = resolveHexColor(
+    storedAccentPreference || (accentControl ? accentControl.value : null) || getCurrentAccentColor()
+  );
+  setAccentColor(initialAccent);
   if (accentControl) {
-    setAccentColor(accentControl.value);
+    accentControl.value = initialAccent;
     accentControl.addEventListener("input", event => {
-      setAccentColor(event.target.value);
+      setAccentColor(event.target.value, { persist: true });
     });
   }
 
@@ -1077,7 +1121,7 @@ function setEditingState(event) {
     const label = formData.get("label").toString().trim();
     const time = formData.get("time").toString();
     const recurrence = formData.get("recurrence").toString();
-    const color = formData.get("color").toString();
+    const color = resolveHexColor(formData.get("color").toString(), getCurrentAccentColor());
     const notes = formData.get("notes").toString().trim();
 
     if (!/^\d{2}:\d{2}$/.test(time)) {
@@ -1096,9 +1140,9 @@ function setEditingState(event) {
 
     customEvents = normalizeCustomEvents(customEvents);
     saveCustomEvents(customEvents);
-    setEditingState(null);
     renderAll();
     createEventForm.reset();
+    setEditingState(null);
   });
 
   setInterval(() => {
