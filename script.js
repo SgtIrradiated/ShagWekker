@@ -2,33 +2,33 @@ const DEFAULT_EVENTS = [
   {
     id: "core-focus",
     time: "10:15",
-    label: "Eerste Shaggie Ritueel",
+    label: "Eerste Kleine Pauze",
     recurrence: "Daily",
-    description: "Rol een verse shag en neem een diepe trek met je ochtendkoffie.",
+    description: "Eerste Kleine Pauze = Eerste Shaggie Ritueel -15 Min",
     color: "#9b6aff"
   },
   {
     id: "core-lunch",
     time: "12:00",
-    label: "Broodje Tabakspraat",
+    label: "Der Große Pauze",
     recurrence: "Daily",
-    description: "Lunchpauze op het balkon met een sjekkie en straatpraat.",
+    description: "Maximum Shag Tijd -30 Min",
     color: "#6affc8"
   },
   {
     id: "core-afternoon",
     time: "14:30",
-    label: "Middag Shag Shuffle",
+    label: "Middag Kleine Pauze",
     recurrence: "MonWedThu",
-    description: "Alleen op ma/wo/do: even uitblazen en de middagshag aansteken.",
+    description: "Middag Shag Shuffle - even uitblazen en de middagshag aansteken. -15 Min",
     color: "#ffc66a"
   },
   {
     id: "core-wrap",
     time: "16:00",
-    label: "Borrel Shag Afsluiter",
+    label: "Weg hier",
     recurrence: "MonWedThu",
-    description: "Sluit de dag af met een stevige shag en napraat over de dag.",
+    description: "Sluit de dag af met een stevige shag.",
     color: "#ff9b6a"
   }
 ];
