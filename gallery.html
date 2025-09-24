@@ -78,6 +78,12 @@
       const galleryContainer = document.querySelector("[data-gallery]");
       if (!galleryContainer) return;
 
+      const modal = createModal();
+      const modalImage = modal.querySelector("[data-gallery-modal-image]");
+      const modalTitle = modal.querySelector("[data-gallery-modal-title]");
+      const modalDescription = modal.querySelector("[data-gallery-modal-description]");
+      const modalCaption = modal.querySelector(".gallery-modal__caption");
+
       /**
        * Gallery-onderhoud tutorial (voor de websitebeheerder):
        * 1. Voeg je afbeeldingen toe aan de map /assets/gallery/ en onthoud de bestandsnamen.
@@ -139,6 +145,14 @@
           const image = document.createElement("img");
           image.src = item.src;
           image.alt = item.alt || item.title || `Gallery afbeelding ${index + 1}`;
+          image.addEventListener("click", () => openModal(item));
+          image.tabIndex = 0;
+          image.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              openModal(item);
+            }
+          });
           figure.appendChild(image);
         } else {
           const placeholder = document.createElement("div");
@@ -163,6 +177,77 @@
 
         galleryContainer.appendChild(card);
       });
+
+      function createModal() {
+        const modalEl = document.createElement("div");
+        modalEl.className = "gallery-modal";
+        modalEl.setAttribute("aria-hidden", "true");
+
+        modalEl.innerHTML = `
+          <div class="gallery-modal__dialog" role="dialog" aria-modal="true" aria-label="Galerij detail">
+            <button class="gallery-modal__close" type="button" data-gallery-close aria-label="Sluit detail">&times;</button>
+            <img class="gallery-modal__image" data-gallery-modal-image alt="" />
+            <figcaption class="gallery-modal__caption">
+              <h3 class="gallery-modal__title" data-gallery-modal-title></h3>
+              <p class="gallery-modal__description" data-gallery-modal-description></p>
+            </figcaption>
+          </div>
+        `;
+
+        modalEl.addEventListener("click", (event) => {
+          if (event.target === modalEl) {
+            closeModal();
+          }
+        });
+
+        const closeButton = modalEl.querySelector("[data-gallery-close]");
+        closeButton.addEventListener("click", closeModal);
+
+        document.body.appendChild(modalEl);
+        return modalEl;
+      }
+
+      function openModal(item) {
+        if (!item.src) return;
+
+        modalImage.src = item.src;
+        modalImage.alt = item.alt || item.title || "";
+
+        modalTitle.textContent = item.title || "Untitled";
+
+        if (item.description) {
+          modalDescription.textContent = item.description;
+          modalDescription.hidden = false;
+        } else {
+          modalDescription.textContent = "";
+          modalDescription.hidden = true;
+        }
+
+        modal.setAttribute("aria-hidden", "false");
+        modal.classList.add("is-open");
+
+        requestAnimationFrame(() => {
+          modalCaption.classList.remove("animate-in");
+          void modalCaption.offsetWidth;
+          modalCaption.classList.add("animate-in");
+        });
+
+        document.addEventListener("keydown", handleKeyDown);
+      }
+
+      function closeModal() {
+        modal.classList.remove("is-open");
+        modal.setAttribute("aria-hidden", "true");
+        modalCaption.classList.remove("animate-in");
+        modalImage.src = "";
+        document.removeEventListener("keydown", handleKeyDown);
+      }
+
+      function handleKeyDown(event) {
+        if (event.key === "Escape") {
+          closeModal();
+        }
+      }
     })();
   </script>
 </body>

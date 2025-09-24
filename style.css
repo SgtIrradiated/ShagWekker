@@ -1059,6 +1059,14 @@ button {
   border-radius: var(--radius-md);
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: var(--shadow-md);
+  cursor: zoom-in;
+  transition: transform var(--transition), box-shadow var(--transition);
+}
+
+.gallery-card__frame img:hover,
+.gallery-card__frame img:focus-visible {
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.42);
 }
 
 .gallery-card__placeholder {
@@ -1091,6 +1099,103 @@ button {
 .gallery-card__description {
   margin: 0;
   color: var(--muted);
+}
+
+.gallery-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.5rem, 5vw, 3rem);
+  background: rgba(2, 6, 18, 0.7);
+  backdrop-filter: blur(18px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 220ms ease;
+  z-index: 40;
+}
+
+.gallery-modal.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.gallery-modal__dialog {
+  position: relative;
+  width: min(640px, 100%);
+  display: grid;
+  gap: clamp(1.25rem, 3vw, 1.75rem);
+  padding: clamp(1.5rem, 4vw, 2.4rem);
+  border-radius: var(--radius-lg);
+  background: var(--surface-strong);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: var(--shadow-xl);
+}
+
+.gallery-modal__image {
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: var(--shadow-md);
+  object-fit: cover;
+}
+
+.gallery-modal__caption {
+  display: grid;
+  gap: 0.65rem;
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+.gallery-modal__caption.animate-in {
+  animation: galleryFadeIn 360ms ease forwards;
+}
+
+.gallery-modal__title {
+  margin: 0;
+  font-size: clamp(1.4rem, 3.2vw, 1.8rem);
+  font-weight: 700;
+}
+
+.gallery-modal__description {
+  margin: 0;
+  color: var(--muted);
+}
+
+.gallery-modal__close {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.85rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: inherit;
+  display: grid;
+  place-items: center;
+  font-size: 1.4rem;
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition);
+}
+
+.gallery-modal__close:hover,
+.gallery-modal__close:focus-visible {
+  background: rgba(255, 255, 255, 0.16);
+  transform: scale(1.03);
+}
+
+@keyframes galleryFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (max-width: 720px) {
