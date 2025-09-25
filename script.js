@@ -280,6 +280,8 @@ function initAudioPlayer() {
   const downloadLink = playerEl.querySelector("[data-audio-download]");
   const volumeInput = playerEl.querySelector("[data-audio-volume]");
   const volumeBox = playerEl.querySelector(".audio-player__volume-box");
+  const trackLabelEl = playerEl.querySelector("[data-audio-track-label]");
+  const defaultTrackLabel = trackLabelEl ? trackLabelEl.textContent : "";
 
   if (
     !selectEl ||
@@ -307,6 +309,14 @@ function initAudioPlayer() {
 
   const setStatus = message => {
     statusEl.textContent = message;
+  };
+
+  const setTrackLabel = label => {
+    if (!trackLabelEl) {
+      return;
+    }
+    const fallback = defaultTrackLabel || "ShagWekker Soundscape";
+    trackLabelEl.textContent = label ? label : fallback;
   };
 
   const applyVolumeVisual = ratio => {
@@ -378,6 +388,7 @@ function initAudioPlayer() {
       resetProgress();
       updateDownloadLink(null);
       setStatus("Selecteer een track om te luisteren.");
+      setTrackLabel("");
       return;
     }
 
@@ -390,6 +401,7 @@ function initAudioPlayer() {
     audio.src = track.url;
     audio.load();
     setStatus(`Geselecteerd: ${track.label}. Druk op play.`);
+    setTrackLabel(track.label);
 
     if (shouldResume) {
       const resumePlayback = () => {
@@ -418,6 +430,7 @@ function initAudioPlayer() {
 
     selectEl.disabled = false;
     selectEl.value = "";
+    setTrackLabel("");
     if (emptyStateEl) {
       emptyStateEl.hidden = true;
     }
@@ -435,6 +448,7 @@ function initAudioPlayer() {
   resetProgress();
   updateDownloadLink(null);
   setStatus("Vaste playlist wordt geladen...");
+  setTrackLabel("");
 
   if (volumeInput) {
     const initialValue = Number(volumeInput.value);
