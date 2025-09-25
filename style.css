@@ -82,6 +82,15 @@ main {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  cursor: pointer;
+}
+
+.brand--bombo-hint {
+  animation: brand-bombo-hint 0.5s ease;
+}
+
+.brand--bombo-hint .brand__mark {
+  animation: brand-bombo-glow 0.5s ease;
 }
 
 .brand__mark {
@@ -90,6 +99,41 @@ main {
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.04);
   box-shadow: var(--shadow-md);
+}
+
+.brand--bombo-hint .brand__mark,
+.brand--bombo-hint {
+  will-change: transform, box-shadow;
+}
+
+@keyframes brand-bombo-hint {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  30% {
+    transform: scale(1.08) rotate(-2deg);
+  }
+  55% {
+    transform: scale(0.95) rotate(2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes brand-bombo-glow {
+  0% {
+    box-shadow: var(--shadow-md);
+  }
+  35% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2), 0 0 18px 6px var(--accent);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(255, 255, 255, 0.12), 0 0 14px 4px var(--accent);
+  }
+  100% {
+    box-shadow: var(--shadow-md);
+  }
 }
 
 .brand__text {

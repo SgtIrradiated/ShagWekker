@@ -58,6 +58,15 @@ const STATIC_AUDIO_REFERENCES = [
 ];
 
 const DEFAULT_ACCENT_COLOR = "#ff0000";
+const BOMBOCLOCK_ACCENT_COLOR = "#1f8a3b";
+const BOMBOCLOCK_ACTIVATION_CLICKS = 3;
+const BOMBOCLOCK_REPLACEMENTS = [
+  { pattern: /Shaggies/g, replacement: "Jonkos" },
+  { pattern: /shaggies/g, replacement: "jonkos" },
+  { pattern: /ShagWekker/g, replacement: "BomboClock" },
+  { pattern: /Shag/g, replacement: "Jonko" },
+  { pattern: /shag/g, replacement: "jonko" }
+];
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 const PREFERENCE_KEYS = {
@@ -1100,14 +1109,14 @@ function initShagMeter() {
     if (amount === 1) {
       return "shaggie";
     }
-    return "shaggs";
+    return "Shaggies";
   };
 
   const pluralizeShag = amount => {
     if (amount === 1) {
       return "1 shaggie";
     }
-    return `${amount} shaggs`;
+    return `${amount} Shaggies`;
   };
 
   const loadState = () => {
@@ -1270,6 +1279,105 @@ function setAccentColor(color, { persist = false } = {}) {
   }
 }
 
+function initBomboClockEasterEgg() {
+  const brand = document.querySelector(".site-header .brand");
+  if (!brand) {
+    return;
+  }
+
+  let activationCount = 0;
+  let textTransformed = false;
+  let accentApplied = false;
+  const animationClass = "brand--bombo-hint";
+
+  const triggerHintAnimation = () => {
+    brand.classList.remove(animationClass);
+    // Force a reflow so the animation can replay on successive clicks.
+    void brand.offsetWidth;
+    brand.classList.add(animationClass);
+  };
+
+  const applyReplacements = () => {
+    if (textTransformed) {
+      return;
+    }
+
+    const walker = document.createTreeWalker(
+      document.body,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          return node && node.nodeValue && node.nodeValue.trim()
+            ? NodeFilter.FILTER_ACCEPT
+            : NodeFilter.FILTER_REJECT;
+        }
+      }
+    );
+
+    const transform = value =>
+      BOMBOCLOCK_REPLACEMENTS.reduce((current, replacement) => {
+        return current.replace(replacement.pattern, replacement.replacement);
+      }, value);
+
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const original = node.nodeValue;
+      const updated = transform(original);
+      if (updated !== original) {
+        node.nodeValue = updated;
+      }
+    }
+
+    if (typeof document.title === "string" && document.title) {
+      const updatedTitle = transform(document.title);
+      if (updatedTitle !== document.title) {
+        document.title = updatedTitle;
+      }
+    }
+
+    document.querySelectorAll("[aria-label]").forEach(element => {
+      const label = element.getAttribute("aria-label");
+      if (label) {
+        const updated = transform(label);
+        if (updated !== label) {
+          element.setAttribute("aria-label", updated);
+        }
+      }
+    });
+
+    textTransformed = true;
+  };
+
+  const applyAccent = () => {
+    if (accentApplied) {
+      return;
+    }
+
+    setAccentColor(BOMBOCLOCK_ACCENT_COLOR, { persist: false });
+    const accentControl = document.getElementById("accentControl");
+    const normalized = normalizeHexColor(BOMBOCLOCK_ACCENT_COLOR);
+    if (accentControl && normalized) {
+      accentControl.value = normalized;
+    }
+    accentApplied = true;
+  };
+
+  brand.addEventListener("click", () => {
+    activationCount += 1;
+    triggerHintAnimation();
+    if (activationCount >= BOMBOCLOCK_ACTIVATION_CLICKS) {
+      applyReplacements();
+      applyAccent();
+    }
+  });
+
+  brand.addEventListener("animationend", event => {
+    if (event.target === brand) {
+      brand.classList.remove(animationClass);
+    }
+  });
+}
+
 function setEditingState(event) {
   const editingId = document.getElementById("editingId");
   const labelInput = document.getElementById("labelInput");
@@ -1340,6 +1448,8 @@ function setEditingState(event) {
       setAccentColor(event.target.value, { persist: true });
     });
   }
+
+  initBomboClockEasterEgg();
 
   initAudioPlayer();
   initShagMeter();
