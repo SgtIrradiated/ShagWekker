@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShagWekker · Hét Archief</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="page">
+    <header class="site-header" id="top">
+      <div class="brand" aria-label="ShagWekker">
+        <img src="assets/shag.png" alt="Placeholder logo illustration" class="brand__mark" />
+        <div class="brand__text">
+          <span class="brand__name">ShagWekker</span>
+          <span class="brand__tag">Je kan nooit genoeg Shag roken.</span>
+        </div>
+      </div>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="index.html#hero">Shag</a>
+        <a href="index.html#planner">Nicotineteller</a>
+        <a href="index.html#customize">Inlassen</a>
+        <a href="index.html#insights">Insights</a>
+        <a href="shagmeter.html">ShagMeter</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="library.html">ShagFiles</a>
+      </nav>
+      <div class="header-actions">
+        <button class="btn ghost" id="contrastToggle" type="button" aria-pressed="false">High contrast</button>
+      </div>
+    </header>
+
+    <main class="archive">
+      <section class="archive__box" aria-labelledby="archive-heading">
+        <header class="archive__header">
+          <p class="archive__eyebrow">Exclusieve collectie</p>
+          <h1 class="archive__title" id="archive-heading">Hét Archief.</h1>
+          <p class="archive__lead">
+            Een besloten videodossier met bewegend bewijs van de ShagWekker legende. Vul de map <code>HetArchief/</code>
+            met jouw .mp4-bestanden en geef ze hieronder context.
+          </p>
+        </header>
+
+        <div class="archive-videos" data-archive role="list"></div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>&copy; <span id="footerYear"></span> ShagWekker. Shag kun je helaas niet eten, maar wel lekker roken.</p>
+      <a class="back-to-top" href="#top">Back to top</a>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    (function initArchiveVideos() {
+      const archiveContainer = document.querySelector("[data-archive]");
+      if (!archiveContainer) return;
+
+      /**
+       * Hét Archief onderhoudshandleiding:
+       * 1. Plaats je .mp4 video's in de map /HetArchief/ en noteer de bestandsnamen.
+       * 2. Dupliceer het object ARCHIVE_VIDEO_TEMPLATE hieronder voor iedere nieuwe video.
+       * 3. Vul per video de src (bijv. "HetArchief/mijn-video.mp4"), titel, beschrijving en optionele poster in.
+       * 4. Bewaar het bestand, vernieuw de pagina en test of de video's correct afspelen.
+       */
+      const ARCHIVE_VIDEO_TEMPLATE = {
+        title: "Naam van de video",
+        description: "Korte toelichting bij de video.",
+        src: "HetArchief/jouw-video.mp4", // Vervang door het pad naar jouw video.
+        type: "video/mp4", // Pas aan als je een ander bestandsformaat gebruikt.
+        poster: "" // Optioneel: een poster-afbeelding die getoond wordt vóór het afspelen.
+      };
+
+      const ARCHIVE_VIDEOS = [
+        {
+          ...ARCHIVE_VIDEO_TEMPLATE,
+          title: "Het verloren shagritueel",
+          description: "Donaldy Trumpowich schiet te hulp tijdens een vergeten rookceremonie.",
+          src: "HetArchief/het-verloren-ritueel.mp4"
+        },
+        {
+          ...ARCHIVE_VIDEO_TEMPLATE,
+          title: "After hours rookworkshop",
+          description: "Pieter Hein deelt geavanceerde draaitechnieken met de nachtploeg.",
+          src: "HetArchief/after-hours-workshop.mp4"
+        }
+      ];
+
+      console.info(
+        "Archief tutorial:\n1) Voeg je .mp4 video's toe aan /HetArchief/.\n2) Dupliceer ARCHIVE_VIDEO_TEMPLATE voor iedere video en vul de velden in.\n3) Herlaad de pagina om de updates te bekijken."
+      );
+
+      ARCHIVE_VIDEOS.forEach((item, index) => {
+        const card = document.createElement("article");
+        card.className = "archive-video";
+        card.setAttribute("role", "listitem");
+
+        if (item.src) {
+          const video = document.createElement("video");
+          video.className = "archive-video__player";
+          video.controls = true;
+          video.preload = "metadata";
+          if (item.poster) {
+            video.poster = item.poster;
+          }
+
+          const source = document.createElement("source");
+          source.src = item.src;
+          source.type = item.type || "video/mp4";
+          video.appendChild(source);
+          video.insertAdjacentText("beforeend", "Je browser ondersteunt het video-element niet.");
+
+          card.appendChild(video);
+        } else {
+          const placeholder = document.createElement("div");
+          placeholder.className = "archive-video__placeholder";
+          placeholder.innerHTML = `Slot ${index + 1}<br><span>Voeg een src toe in ARCHIVE_VIDEOS.</span>`;
+          card.appendChild(placeholder);
+        }
+
+        const title = document.createElement("h3");
+        title.className = "archive-video__title";
+        title.textContent = item.title || `Video ${index + 1}`;
+        card.appendChild(title);
+
+        if (item.description) {
+          const description = document.createElement("p");
+          description.className = "archive-video__description";
+          description.textContent = item.description;
+          card.appendChild(description);
+        }
+
+        archiveContainer.appendChild(card);
+      });
+    })();
+  </script>
+</body>
+</html>
