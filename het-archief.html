@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShagWekker · Hét Archief</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="page">
+    <header class="site-header" id="top">
+      <div class="brand" aria-label="ShagWekker">
+        <img src="assets/shag.png" alt="Placeholder logo illustration" class="brand__mark" />
+        <div class="brand__text">
+          <span class="brand__name">ShagWekker</span>
+          <span class="brand__tag">Je kan nooit genoeg Shag roken.</span>
+        </div>
+      </div>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="index.html#hero">Shag</a>
+        <a href="index.html#planner">Nicotineteller</a>
+        <a href="index.html#customize">Inlassen</a>
+        <a href="index.html#insights">Insights</a>
+        <a href="shagmeter.html">ShagMeter</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="library.html">ShagFiles</a>
+      </nav>
+      <div class="header-actions">
+        <button class="btn ghost" id="contrastToggle" type="button" aria-pressed="false">High contrast</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="archive-section" aria-labelledby="archive-heading">
+        <div class="archive-box">
+          <header class="archive-header">
+            <p class="archive-header__eyebrow">Videovault</p>
+            <h1 id="archive-heading">Hét Archief</h1>
+            <p class="archive-header__description">
+              Een zorgvuldig opgebouwde collectie van bewegend beeld rondom de ShagWekker legende.
+              Scroll door de lijst om het verleden (en de toekomst) opnieuw te beleven.
+            </p>
+          </header>
+
+          <div class="archive-video-list" data-archive-videos role="list"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>&copy; <span id="footerYear"></span> ShagWekker. Shag kun je helaas niet eten, maar wel lekker roken.</p>
+      <a class="back-to-top" href="#top">Back to top</a>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    (function initArchive() {
+      const list = document.querySelector('[data-archive-videos]');
+      if (!list) return;
+
+      /**
+       * Archief onderhoud tutorial (voor de websitebeheerder):
+       * 1. Voeg je videobestanden toe aan de map /HetArchief/ (bijv. "HetArchief/shagmoment.mp4").
+       * 2. Kopieer het ARCHIVE_VIDEO_TEMPLATE object hieronder en vul de titel, beschrijving en bron in.
+       * 3. Voeg het nieuwe object toe aan ARCHIVE_VIDEOS.
+       * 4. Sla het bestand op en vernieuw de pagina om de nieuwe video te zien.
+       */
+      const ARCHIVE_VIDEO_TEMPLATE = {
+        title: 'Titel van de video',
+        description: 'Korte beschrijving van de video.',
+        src: 'HetArchief/jouw-video.mp4',
+        type: 'video/mp4'
+      };
+
+      const ARCHIVE_VIDEOS = [
+        {
+          ...ARCHIVE_VIDEO_TEMPLATE,
+          title: 'ShagWekker Origins',
+          description: 'Het verloren promofilmpje waarin de allereerste wekker werd aangezet.',
+          src: 'HetArchief/shagwekker-origins.mp4'
+        },
+        {
+          ...ARCHIVE_VIDEO_TEMPLATE,
+          title: 'Nachtelijke Rookronde',
+          description: 'Een intieme blik achter de schermen tijdens de middernachtelijke shag ceremonie.',
+          src: 'HetArchief/nachtelijke-rookronde.mp4'
+        }
+      ];
+
+      console.info(
+        'Archief tutorial:\n1) Upload je video\'s naar /HetArchief/.\n2) Dupliceer ARCHIVE_VIDEO_TEMPLATE en voeg het toe aan ARCHIVE_VIDEOS.\n3) Herlaad de pagina om de update te bekijken.'
+      );
+
+      ARCHIVE_VIDEOS.forEach((videoItem, index) => {
+        const entry = document.createElement('article');
+        entry.className = 'archive-video';
+        entry.setAttribute('role', 'listitem');
+
+        const header = document.createElement('header');
+        header.className = 'archive-video__header';
+
+        const title = document.createElement('h3');
+        title.className = 'archive-video__title';
+        title.textContent = videoItem.title || `Video ${index + 1}`;
+        header.appendChild(title);
+
+        if (videoItem.description) {
+          const description = document.createElement('p');
+          description.className = 'archive-video__description';
+          description.textContent = videoItem.description;
+          header.appendChild(description);
+        }
+
+        entry.appendChild(header);
+
+        const frame = document.createElement('div');
+        frame.className = 'archive-video__frame';
+
+        const video = document.createElement('video');
+        video.className = 'archive-video__player';
+        video.controls = true;
+        video.preload = 'metadata';
+        video.playsInline = true;
+
+        if (videoItem.poster) {
+          video.poster = videoItem.poster;
+        }
+
+        if (videoItem.src) {
+          const source = document.createElement('source');
+          source.src = videoItem.src;
+          source.type = videoItem.type || 'video/mp4';
+          video.appendChild(source);
+        } else {
+          const placeholder = document.createElement('div');
+          placeholder.className = 'archive-video__placeholder';
+          placeholder.innerHTML = `Slot ${index + 1}<br><span>Voeg een src toe in het script.</span>`;
+          frame.appendChild(placeholder);
+          video.hidden = true;
+        }
+
+        video.appendChild(document.createTextNode('Je browser ondersteunt deze video niet.'));
+
+        frame.appendChild(video);
+        entry.appendChild(frame);
+
+        list.appendChild(entry);
+      });
+    })();
+  </script>
+</body>
+</html>
