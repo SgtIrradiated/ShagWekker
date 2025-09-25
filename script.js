@@ -61,6 +61,8 @@ const DEFAULT_ACCENT_COLOR = "#ff0000";
 const BOMBOCLOCK_ACCENT_COLOR = "#1f8a3b";
 const BOMBOCLOCK_ACTIVATION_CLICKS = 3;
 const BOMBOCLOCK_REPLACEMENTS = [
+  { pattern: /Shaggies/g, replacement: "Jonkos" },
+  { pattern: /shaggies/g, replacement: "jonkos" },
   { pattern: /ShagWekker/g, replacement: "BomboClock" },
   { pattern: /Shag/g, replacement: "Jonko" },
   { pattern: /shag/g, replacement: "jonko" }
@@ -1107,14 +1109,14 @@ function initShagMeter() {
     if (amount === 1) {
       return "shaggie";
     }
-    return "shaggs";
+    return "Shaggies";
   };
 
   const pluralizeShag = amount => {
     if (amount === 1) {
       return "1 shaggie";
     }
-    return `${amount} shaggs`;
+    return `${amount} Shaggies`;
   };
 
   const loadState = () => {
@@ -1286,6 +1288,14 @@ function initBomboClockEasterEgg() {
   let activationCount = 0;
   let textTransformed = false;
   let accentApplied = false;
+  const animationClass = "brand--bombo-hint";
+
+  const triggerHintAnimation = () => {
+    brand.classList.remove(animationClass);
+    // Force a reflow so the animation can replay on successive clicks.
+    void brand.offsetWidth;
+    brand.classList.add(animationClass);
+  };
 
   const applyReplacements = () => {
     if (textTransformed) {
@@ -1354,9 +1364,16 @@ function initBomboClockEasterEgg() {
 
   brand.addEventListener("click", () => {
     activationCount += 1;
-    applyReplacements();
+    triggerHintAnimation();
     if (activationCount >= BOMBOCLOCK_ACTIVATION_CLICKS) {
+      applyReplacements();
       applyAccent();
+    }
+  });
+
+  brand.addEventListener("animationend", event => {
+    if (event.target === brand) {
+      brand.classList.remove(animationClass);
     }
   });
 }
