@@ -33,6 +33,8 @@ const DEFAULT_EVENTS = [
   }
 ];
 
+const DEFAULT_EVENT_IDS = new Set(DEFAULT_EVENTS.map(event => event.id));
+
 const STORAGE_KEY = "shagwekker.customEvents.v1";
 const LEGACY_KEY = "multiCountdown.times";
 const SUMMARY_MESSAGES = [
@@ -731,7 +733,7 @@ function recurrenceTag(recurrence) {
   }
 }
 
-function buildEventCard(event, source = "core") {
+function buildEventCard(event, { source = "core", includeActions = source === "custom" } = {}) {
   const card = document.createElement("article");
   card.className = "event-card";
   card.dataset.id = event.id;
@@ -759,7 +761,7 @@ function buildEventCard(event, source = "core") {
     <div class="event-card__count" aria-live="off">--h --m --s</div>
   `;
 
-  if (source === "custom") {
+  if (includeActions && source === "custom") {
     const actions = document.createElement("div");
     actions.className = "event-card__actions";
     actions.innerHTML = `
@@ -772,13 +774,22 @@ function buildEventCard(event, source = "core") {
   return card;
 }
 
-function renderDefaultBoard(container) {
+function renderTellerBoard(container, customEvents) {
   container.innerHTML = "";
-  [...DEFAULT_EVENTS]
-    .sort((a, b) => toMinutes(a.time) - toMinutes(b.time))
-    .forEach(event => {
-      container.appendChild(buildEventCard(event));
+  const events = getAllEvents(customEvents)
+    .slice()
+    .sort((a, b) => {
+      const timeDelta = toMinutes(a.time) - toMinutes(b.time);
+      if (timeDelta !== 0) {
+        return timeDelta;
+      }
+      return a.label.localeCompare(b.label);
     });
+
+  events.forEach(event => {
+    const source = DEFAULT_EVENT_IDS.has(event.id) ? "core" : "custom";
+    container.appendChild(buildEventCard(event, { source, includeActions: false }));
+  });
 }
 
 function renderCustomBoard(container, events, emptyStateEl) {
@@ -789,7 +800,7 @@ function renderCustomBoard(container, events, emptyStateEl) {
   }
   emptyStateEl.hidden = true;
   events.forEach(event => {
-    container.appendChild(buildEventCard(event, "custom"));
+    container.appendChild(buildEventCard(event, { source: "custom" }));
   });
 }
 
@@ -890,10 +901,9 @@ function updateSummaries(now, events, soonest) {
 function highlightSoonestCard(soonest) {
   document.querySelectorAll(".event-card").forEach(card => card.classList.remove("is-next"));
   if (soonest && soonest.event) {
-    const card = document.querySelector(`.event-card[data-id="${soonest.event.id}"]`);
-    if (card) {
-      card.classList.add("is-next");
-    }
+    document
+      .querySelectorAll(`.event-card[data-id="${soonest.event.id}"]`)
+      .forEach(card => card.classList.add("is-next"));
   }
 }
 
@@ -902,15 +912,17 @@ function updateCountdowns(events, compact) {
   let soonest = null;
 
   events.forEach(event => {
-    const card = document.querySelector(`.event-card[data-id="${event.id}"]`);
-    if (!card) return;
+    const cards = document.querySelectorAll(`.event-card[data-id="${event.id}"]`);
+    if (!cards.length) return;
     const next = nextOccurrenceFor(event, now);
     const remain = next - now;
     const parts = diffParts(remain);
-    const countEl = card.querySelector(".event-card__count");
-    if (countEl) {
-      countEl.textContent = formatCountdown(parts, compact);
-    }
+    cards.forEach(card => {
+      const countEl = card.querySelector(".event-card__count");
+      if (countEl) {
+        countEl.textContent = formatCountdown(parts, compact);
+      }
+    });
     if (!soonest || remain < soonest.remain) {
       soonest = { event, remain };
     }
@@ -1002,7 +1014,7 @@ function setEditingState(event) {
 
   initAudioPlayer();
 
-  const defaultBoard = document.getElementById("defaultBoard");
+  const tellerBoard = document.getElementById("tellerBoard");
   const customBoard = document.getElementById("customBoard");
   const timelineList = document.getElementById("timelineList");
   const customEmptyState = document.getElementById("customEmptyState");
@@ -1013,7 +1025,7 @@ function setEditingState(event) {
   const createEventForm = document.getElementById("createEventForm");
 
   const plannerElementsReady =
-    defaultBoard &&
+    tellerBoard &&
     customBoard &&
     timelineList &&
     customEmptyState &&
@@ -1031,7 +1043,7 @@ function setEditingState(event) {
   let compactMode = false;
 
   const renderAll = () => {
-    renderDefaultBoard(defaultBoard);
+    renderTellerBoard(tellerBoard, customEvents);
     renderCustomBoard(customBoard, customEvents, customEmptyState);
     buildTimeline(timelineList, getAllEvents(customEvents), compactMode);
     updateCountdowns(getAllEvents(customEvents), compactMode);
