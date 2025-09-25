@@ -91,24 +91,31 @@
               </div>
             </div>
 
-            <div
-              class="shagmeter__bar"
-              role="meter"
-              aria-valuemin="0"
-              aria-valuemax="8"
-              aria-valuenow="0"
-              aria-label="ShagMeter voortgang"
-              data-shagmeter-meter
-            >
-              <div class="shagmeter__fill" data-shagmeter-fill></div>
-              <div class="shagmeter__sparkle" aria-hidden="true"></div>
+            <div class="shagmeter__display">
+              <div
+                class="shagmeter__core"
+                role="meter"
+                aria-valuemin="0"
+                aria-valuemax="8"
+                aria-valuenow="0"
+                aria-label="ShagMeter voortgang"
+                data-shagmeter-meter
+              >
+                <div class="shagmeter__pulse" aria-hidden="true"></div>
+                <div class="shagmeter__value">
+                  <span class="shagmeter__count" data-shagmeter-count>0</span>
+                  <span class="shagmeter__count-label" data-shagmeter-count-label>shaggs</span>
+                </div>
+              </div>
+              <div class="shagmeter__eruption" data-shagmeter-explosion aria-hidden="true"></div>
             </div>
 
             <p class="shagmeter__status" data-shagmeter-status>0 van 8 shaggs genoteerd.</p>
 
             <div class="shagmeter__actions">
-              <button class="btn primary shagmeter__add" type="button" data-shagmeter-add>+Shaggie</button>
-              <button class="btn ghost" type="button" data-shagmeter-reset>Reset</button>
+              <button class="shagmeter__add-btn" type="button" data-shagmeter-add aria-label="Voeg een shaggie toe">+</button>
+              <span class="shagmeter__actions-label">Shaggie</span>
+              <button class="btn ghost shagmeter__reset" type="button" data-shagmeter-reset>Reset</button>
             </div>
           </article>
         </div>

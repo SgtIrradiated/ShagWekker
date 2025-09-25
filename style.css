@@ -19,6 +19,12 @@
   --grid-gap: clamp(1rem, 2vw, 1.8rem);
 }
 
+@property --shagmeter-progress {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 0;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -242,7 +248,7 @@ main {
 
 .shagmeter-card {
   position: relative;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .shagmeter-card::after {
@@ -254,12 +260,16 @@ main {
 }
 
 .shagmeter-card.is-complete {
-  box-shadow: 0 20px 50px rgba(255, 0, 70, 0.3);
+  box-shadow: 0 20px 50px rgba(255, 0, 70, 0.35);
   border-color: rgba(255, 255, 255, 0.18);
 }
 
 .shagmeter-card.is-complete .shagmeter__status {
   color: var(--success);
+}
+
+.shagmeter-card.is-exploding::after {
+  background: radial-gradient(circle, rgba(255, 0, 90, 0.22), transparent 65%);
 }
 
 .shagmeter__goal {
@@ -287,74 +297,207 @@ main {
   font-weight: 600;
 }
 
-.shagmeter__bar {
+.shagmeter__display {
   position: relative;
-  height: 26px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.08);
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+  width: min(320px, 70vw);
+}
+
+.shagmeter__core {
+  --shagmeter-progress: 0;
+  --shagmeter-progress-deg: calc(var(--shagmeter-progress) * 360deg);
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 45%, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 60%),
+    rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 40px 90px rgba(255, 0, 90, 0.18);
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  z-index: 1;
+  transition: --shagmeter-progress 0.6s ease;
 }
 
-.shagmeter__fill {
+.shagmeter__core::before {
+  content: "";
   position: absolute;
   inset: 0;
-  width: 0%;
-  background: linear-gradient(90deg, var(--accent), rgba(255, 108, 155, 0.9));
-  transition: width var(--transition);
+  border-radius: 50%;
+  background: conic-gradient(
+    from -90deg,
+    var(--accent) var(--shagmeter-progress-deg),
+    rgba(255, 255, 255, 0.08) var(--shagmeter-progress-deg)
+  );
+  filter: drop-shadow(0 0 25px rgba(255, 0, 90, 0.4));
 }
 
-.shagmeter__sparkle {
+.shagmeter__core::after {
+  content: "";
+  position: absolute;
+  inset: 14%;
+  border-radius: 50%;
+  background: var(--surface-strong);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.45);
+}
+
+.shagmeter__value {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.shagmeter__count {
+  font-size: clamp(2.8rem, 6vw, 3.6rem);
+  font-weight: 700;
+}
+
+.shagmeter__count-label {
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.shagmeter__pulse {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 10% 40%, rgba(255, 255, 255, 0.25), transparent 60%),
-    radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.2), transparent 55%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.18), transparent 60%);
   mix-blend-mode: screen;
+  opacity: 0;
+}
+
+.shagmeter__core.is-active .shagmeter__pulse {
+  animation: shagmeter-pulse 1.6s ease-out;
+}
+
+.shagmeter__core.is-active::before {
+  animation: shagmeter-core-flash 1.6s ease-out;
+}
+
+.shagmeter__eruption {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 0, 90, 0.45), transparent 60%);
   pointer-events: none;
-  opacity: 0.6;
+  opacity: 0;
+  z-index: 0;
+  transform: translate(-50%, -50%) scale(0.75);
+}
+
+.shagmeter__eruption.is-active {
+  animation: shagmeter-burst 2.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .shagmeter__status {
   margin: 0;
   font-size: 0.95rem;
   color: var(--muted);
+  text-align: center;
 }
 
 .shagmeter__actions {
   display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: center;
   flex-wrap: wrap;
-  gap: 0.75rem;
 }
 
-.shagmeter__add {
-  position: relative;
-  overflow: hidden;
-  background: linear-gradient(135deg, var(--accent), rgba(255, 120, 200, 0.95));
+.shagmeter__add-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
   border: none;
-  box-shadow: 0 12px 30px rgba(255, 0, 80, 0.35);
+  display: grid;
+  place-items: center;
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #fff;
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4), transparent 55%),
+    linear-gradient(140deg, var(--accent), rgba(255, 117, 190, 0.95));
+  box-shadow: 0 20px 45px rgba(255, 0, 90, 0.38);
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
-.shagmeter__add::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.25), transparent 60%);
-  opacity: 0;
-  transition: opacity var(--transition);
+.shagmeter__add-btn:hover,
+.shagmeter__add-btn:focus-visible {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 26px 60px rgba(255, 0, 110, 0.48);
 }
 
-.shagmeter__add:hover::after,
-.shagmeter__add:focus-visible::after {
-  opacity: 1;
+.shagmeter__add-btn:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.3);
+  opacity: 0.65;
 }
 
-.shagmeter-card.is-complete .shagmeter__add {
-  box-shadow: 0 12px 30px rgba(126, 247, 161, 0.4);
-  background: linear-gradient(135deg, var(--success), rgba(180, 255, 210, 0.95));
+.shagmeter-card.is-complete .shagmeter__add-btn {
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4), transparent 55%),
+    linear-gradient(140deg, var(--success), rgba(190, 255, 214, 0.95));
+  box-shadow: 0 26px 60px rgba(126, 247, 161, 0.45);
 }
 
-.shagmeter-card.is-complete .shagmeter__add::after {
-  background: linear-gradient(120deg, rgba(255, 255, 255, 0.3), transparent 60%);
+.shagmeter__actions-label {
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.shagmeter__reset {
+  border-radius: 999px;
+}
+
+@keyframes shagmeter-pulse {
+  0% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  70% {
+    opacity: 0.25;
+    transform: scale(1.35);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.6);
+  }
+}
+
+@keyframes shagmeter-core-flash {
+  0% {
+    filter: drop-shadow(0 0 25px rgba(255, 0, 110, 0.5));
+  }
+  100% {
+    filter: drop-shadow(0 0 10px rgba(255, 0, 110, 0.1));
+  }
+}
+
+@keyframes shagmeter-burst {
+  0% {
+    opacity: 0.85;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  60% {
+    opacity: 0.35;
+    transform: translate(-50%, -50%) scale(6);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(14);
+  }
 }
 
 .hero__media figcaption {

@@ -1012,24 +1012,27 @@ function initShagMeter() {
 
   const timelineList = section.querySelector("[data-shagmeter-timeline]");
   const meterEl = section.querySelector("[data-shagmeter-meter]");
-  const fillEl = section.querySelector("[data-shagmeter-fill]");
   const statusEl = section.querySelector("[data-shagmeter-status]");
   const goalInput = section.querySelector("[data-shagmeter-goal]");
   const goalValueEl = section.querySelector("[data-shagmeter-goal-value]");
   const addButton = section.querySelector("[data-shagmeter-add]");
   const resetButton = section.querySelector("[data-shagmeter-reset]");
   const shagmeterCard = section.querySelector(".shagmeter-card");
+  const countValueEl = section.querySelector("[data-shagmeter-count]");
+  const countLabelEl = section.querySelector("[data-shagmeter-count-label]");
+  const explosionEl = section.querySelector("[data-shagmeter-explosion]");
 
   if (
     !timelineList ||
     !meterEl ||
-    !fillEl ||
     !statusEl ||
     !goalInput ||
     !goalValueEl ||
     !addButton ||
     !resetButton ||
-    !shagmeterCard
+    !shagmeterCard ||
+    !countValueEl ||
+    !countLabelEl
   ) {
     return false;
   }
@@ -1093,6 +1096,13 @@ function initShagMeter() {
     return Math.min(sliderMax, Math.max(sliderMin, Math.round(numeric)));
   };
 
+  const shagUnit = amount => {
+    if (amount === 1) {
+      return "shaggie";
+    }
+    return "shaggs";
+  };
+
   const pluralizeShag = amount => {
     if (amount === 1) {
       return "1 shaggie";
@@ -1135,6 +1145,9 @@ function initShagMeter() {
   const defaultGoal = clampGoal(goalInput.value || sliderMin);
   let state = loadState() || { goal: defaultGoal, count: 0 };
 
+  let lastCompletionState = state.count >= state.goal && state.goal > 0;
+  let explosionCleanupTimer = null;
+
   goalInput.value = state.goal;
   if (state.count > state.goal) {
     state.count = state.goal;
@@ -1145,10 +1158,49 @@ function initShagMeter() {
     goalValueEl.textContent = pluralizeShag(state.goal);
   };
 
+  const stopExplosion = () => {
+    if (explosionCleanupTimer) {
+      clearTimeout(explosionCleanupTimer);
+      explosionCleanupTimer = null;
+    }
+    shagmeterCard.classList.remove("is-exploding");
+    meterEl.classList.remove("is-active");
+    if (explosionEl) {
+      explosionEl.classList.remove("is-active");
+    }
+  };
+
+  const triggerExplosion = () => {
+    if (explosionCleanupTimer) {
+      clearTimeout(explosionCleanupTimer);
+    }
+    shagmeterCard.classList.add("is-exploding");
+    if (explosionEl) {
+      explosionEl.classList.remove("is-active");
+      void explosionEl.offsetWidth;
+      explosionEl.classList.add("is-active");
+    }
+    meterEl.classList.remove("is-active");
+    void meterEl.offsetWidth;
+    meterEl.classList.add("is-active");
+    explosionCleanupTimer = window.setTimeout(() => {
+      shagmeterCard.classList.remove("is-exploding");
+      meterEl.classList.remove("is-active");
+      explosionCleanupTimer = null;
+    }, 2400);
+  };
+
+  if (explosionEl) {
+    explosionEl.addEventListener("animationend", () => {
+      explosionEl.classList.remove("is-active");
+    });
+  }
+
   const updateMeter = () => {
     const safeGoal = state.goal > 0 ? state.goal : 1;
-    const ratio = Math.min(1, state.count / safeGoal);
-    fillEl.style.width = `${(ratio * 100).toFixed(2)}%`;
+    const ratio = safeGoal > 0 ? state.count / safeGoal : 0;
+    const clampedRatio = Math.min(1, Math.max(0, ratio));
+    meterEl.style.setProperty("--shagmeter-progress", clampedRatio.toFixed(4));
     meterEl.setAttribute("aria-valuemax", String(state.goal));
     meterEl.setAttribute("aria-valuenow", String(Math.min(state.count, state.goal)));
     meterEl.setAttribute(
@@ -1164,8 +1216,21 @@ function initShagMeter() {
         : `${pluralizeShag(state.count)} van ${pluralizeShag(state.goal)} genoteerd.`;
 
     statusEl.textContent = statusText;
-    shagmeterCard.classList.toggle("is-complete", state.count >= state.goal && state.goal > 0);
+
+    countValueEl.textContent = String(state.count);
+    countLabelEl.textContent = shagUnit(state.count);
+
+    const isComplete = state.count >= state.goal && state.goal > 0;
+    shagmeterCard.classList.toggle("is-complete", isComplete);
     addButton.disabled = state.goal > 0 && state.count >= state.goal;
+
+    if (isComplete && !lastCompletionState) {
+      triggerExplosion();
+    } else if (!isComplete && lastCompletionState) {
+      stopExplosion();
+    }
+
+    lastCompletionState = isComplete;
   };
 
   updateGoalValue();
