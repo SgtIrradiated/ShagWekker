@@ -44,7 +44,7 @@
           </p>
         </header>
 
-        <div class="archive-videos" data-archive role="list"></div>
+        <div class="archive-videos" data-archive data-archive-source="HetArchief/videos.json" role="list"></div>
       </section>
     </main>
 
@@ -60,41 +60,23 @@
       const archiveContainer = document.querySelector("[data-archive]");
       if (!archiveContainer) return;
 
-      /**
-       * Hét Archief onderhoudshandleiding:
-       * 1. Plaats je .mp4 video's in de map /HetArchief/ en noteer de bestandsnamen.
-       * 2. Dupliceer het object ARCHIVE_VIDEO_TEMPLATE hieronder voor iedere nieuwe video.
-       * 3. Vul per video de src (bijv. "HetArchief/mijn-video.mp4"), titel, beschrijving en optionele poster in.
-       * 4. Bewaar het bestand, vernieuw de pagina en test of de video's correct afspelen.
-       */
-      const ARCHIVE_VIDEO_TEMPLATE = {
-        title: "Naam van de video",
-        description: "Korte toelichting bij de video.",
-        src: "HetArchief/jouw-video.mp4", // Vervang door het pad naar jouw video.
-        type: "video/mp4", // Pas aan als je een ander bestandsformaat gebruikt.
-        poster: "" // Optioneel: een poster-afbeelding die getoond wordt vóór het afspelen.
+      const dataSource = archiveContainer.getAttribute("data-archive-source") || "HetArchief/videos.json";
+
+      const renderPlaceholder = (message, index = null) => {
+        const card = document.createElement("article");
+        card.className = "archive-video";
+        card.setAttribute("role", "listitem");
+
+        const placeholder = document.createElement("div");
+        placeholder.className = "archive-video__placeholder";
+        const label = typeof index === "number" ? `Slot ${index + 1}` : "Archief update";
+        placeholder.innerHTML = `${label}<br><span>${message}</span>`;
+
+        card.appendChild(placeholder);
+        archiveContainer.appendChild(card);
       };
 
-      const ARCHIVE_VIDEOS = [
-        {
-          ...ARCHIVE_VIDEO_TEMPLATE,
-          title: "Het verloren shagritueel",
-          description: "Donaldy Trumpowich schiet te hulp tijdens een vergeten rookceremonie.",
-          src: "HetArchief/het-verloren-ritueel.mp4"
-        },
-        {
-          ...ARCHIVE_VIDEO_TEMPLATE,
-          title: "After hours rookworkshop",
-          description: "Pieter Hein deelt geavanceerde draaitechnieken met de nachtploeg.",
-          src: "HetArchief/after-hours-workshop.mp4"
-        }
-      ];
-
-      console.info(
-        "Archief tutorial:\n1) Voeg je .mp4 video's toe aan /HetArchief/.\n2) Dupliceer ARCHIVE_VIDEO_TEMPLATE voor iedere video en vul de velden in.\n3) Herlaad de pagina om de updates te bekijken."
-      );
-
-      ARCHIVE_VIDEOS.forEach((item, index) => {
+      const renderVideoCard = (item, index) => {
         const card = document.createElement("article");
         card.className = "archive-video";
         card.setAttribute("role", "listitem");
@@ -116,10 +98,8 @@
 
           card.appendChild(video);
         } else {
-          const placeholder = document.createElement("div");
-          placeholder.className = "archive-video__placeholder";
-          placeholder.innerHTML = `Slot ${index + 1}<br><span>Voeg een src toe in ARCHIVE_VIDEOS.</span>`;
-          card.appendChild(placeholder);
+          renderPlaceholder("Voeg een src toe in videos.json.", index);
+          return;
         }
 
         const title = document.createElement("h3");
@@ -135,7 +115,31 @@
         }
 
         archiveContainer.appendChild(card);
-      });
+      };
+
+      fetch(dataSource)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Kan archiefdata niet laden (${response.status})`);
+          }
+          return response.json();
+        })
+        .then((data) => {
+          if (data && data.instructions) {
+            console.info(`Archiefhandleiding: ${data.instructions}`);
+          }
+
+          if (!data || !Array.isArray(data.videos) || data.videos.length === 0) {
+            renderPlaceholder("Voeg video's toe aan videos.json om ze hier te tonen.");
+            return;
+          }
+
+          data.videos.forEach((item, index) => renderVideoCard(item, index));
+        })
+        .catch((error) => {
+          console.error(error);
+          renderPlaceholder("Kon de archieflijst niet laden. Controleer videos.json.");
+        });
     })();
   </script>
 </body>

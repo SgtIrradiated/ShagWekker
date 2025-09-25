@@ -1,0 +1,19 @@
+{
+  "instructions": "Voeg nieuwe video's toe door een object binnen \"videos\" te kopiëren. Vul minimaal de titel, beschrijving en het pad naar je .mp4-bestand in. Optioneel kun je het MIME-type (type) en een posterafbeelding toevoegen.",
+  "videos": [
+    {
+      "title": "Het verloren shagritueel",
+      "description": "Donaldy Trumpowich schiet te hulp tijdens een vergeten rookceremonie.",
+      "src": "HetArchief/het-verloren-ritueel.mp4",
+      "type": "video/mp4",
+      "poster": ""
+    },
+    {
+      "title": "After hours rookworkshop",
+      "description": "Pieter Hein deelt geavanceerde draaitechnieken met de nachtploeg.",
+      "src": "HetArchief/after-hours-workshop.mp4",
+      "type": "video/mp4",
+      "poster": ""
+    }
+  ]
+}
