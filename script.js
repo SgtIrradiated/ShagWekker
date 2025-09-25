@@ -49,12 +49,12 @@ const AUDIO_EXTENSIONS = [".mp3", ".ogg", ".wav", ".m4a", ".aac", ".flac", ".web
 const AUDIO_PROGRESS_STEPS = 1000;
 // Pas deze lijst aan om vaste tracks te tonen zonder dat er dynamische scanning nodig is.
 const STATIC_AUDIO_REFERENCES = [
-  { src: `${AUDIO_DIRECTORY}Shag Track.flac`, title: "De Shag Trek" },
-  { src: `${AUDIO_DIRECTORY}audio.mp3`, title: "Blije Man" },
-  { src: `${AUDIO_DIRECTORY}30 Days In The Hole.flac`, title: "30 Days In The Hole" },
-  { src: `${AUDIO_DIRECTORY}Hank.mp3`, title: "Are You Sure Hank Done It This Way" },
-  { src: `${AUDIO_DIRECTORY}nicotinerzshy.mp3`, title: "Donaldy Trumpowich" },
-  { src: `${AUDIO_DIRECTORY}blyat.mp3`, title: "Blyat" }
+  { src: `${AUDIO_DIRECTORY}Shag Track.flac`, title: "De Shag Trek", artist: "Shag Archives" },
+  { src: `${AUDIO_DIRECTORY}audio.mp3`, title: "Blije Man", artist: "Shag Collective" },
+  { src: `${AUDIO_DIRECTORY}30 Days In The Hole.flac`, title: "30 Days In The Hole", artist: "Classic Nicotine" },
+  { src: `${AUDIO_DIRECTORY}Hank.mp3`, title: "Are You Sure Hank Done It This Way", artist: "Shag Archives" },
+  { src: `${AUDIO_DIRECTORY}nicotinerzshy.mp3`, title: "Donaldy Trumpowich", artist: "Kremlin Cut" },
+  { src: `${AUDIO_DIRECTORY}blyat.mp3`, title: "Blyat", artist: "Ruski Rolls" }
 ];
 
 const DEFAULT_ACCENT_COLOR = "#ff0000";
@@ -181,7 +181,7 @@ function resolveAudioUrl(path = "") {
   return trimmed.startsWith(AUDIO_DIRECTORY) ? trimmed : `${AUDIO_DIRECTORY}${trimmed}`;
 }
 
-function createTrackDescriptor(path, explicitLabel) {
+function createTrackDescriptor(path, explicitLabel, meta = {}) {
   if (!path && path !== 0) {
     return null;
   }
@@ -198,7 +198,20 @@ function createTrackDescriptor(path, explicitLabel) {
     return null;
   }
   const label = explicitLabel?.toString().trim() || prettifyTrackLabel(fileName);
-  return { url, label, fileName };
+  const descriptor = { url, label, fileName };
+  if (meta && typeof meta === "object") {
+    const { artist, cover, album } = meta;
+    if (typeof artist === "string" && artist.trim()) {
+      descriptor.artist = artist.trim();
+    }
+    if (typeof cover === "string" && cover.trim()) {
+      descriptor.cover = cover.trim();
+    }
+    if (typeof album === "string" && album.trim()) {
+      descriptor.album = album.trim();
+    }
+  }
+  return descriptor;
 }
 
 function dedupeTracks(tracks) {
@@ -223,7 +236,12 @@ const STATIC_AUDIO_LIBRARY = dedupeTracks(
     }
     if (entry && typeof entry === "object") {
       const reference = entry.src || entry.url || entry.file || entry.path || entry.href;
-      return createTrackDescriptor(reference, entry.title || entry.label || entry.name);
+      const meta = {
+        artist: entry.artist || entry.author || entry.creator,
+        cover: entry.cover || entry.art || entry.image,
+        album: entry.album,
+      };
+      return createTrackDescriptor(reference, entry.title || entry.label || entry.name, meta);
     }
     return null;
   }).filter(Boolean)
@@ -241,7 +259,12 @@ async function discoverAudioTracks() {
           }
           if (entry && typeof entry === "object") {
             const reference = entry.src || entry.url || entry.file || entry.path || entry.href;
-            return createTrackDescriptor(reference, entry.title || entry.label || entry.name);
+            const meta = {
+              artist: entry.artist || entry.author || entry.creator,
+              cover: entry.cover || entry.art || entry.image,
+              album: entry.album,
+            };
+            return createTrackDescriptor(reference, entry.title || entry.label || entry.name, meta);
           }
           return null;
         })
@@ -272,6 +295,9 @@ function initAudioPlayer() {
   const selectEl = playerEl.querySelector("[data-audio-select]");
   const statusEl = playerEl.querySelector("[data-audio-status]");
   const emptyStateEl = playerEl.querySelector("[data-audio-empty]");
+  const titleEl = playerEl.querySelector("[data-audio-title]");
+  const metaEl = playerEl.querySelector("[data-audio-meta]");
+  const artEl = playerEl.querySelector("[data-audio-art]");
   const playButton = playerEl.querySelector("[data-audio-play]");
   const stopButton = playerEl.querySelector("[data-audio-stop]");
   const progressInput = playerEl.querySelector("[data-audio-progress]");
@@ -296,6 +322,10 @@ function initAudioPlayer() {
   progressInput.max = String(AUDIO_PROGRESS_STEPS);
   playerEl.dataset.state = "loading";
 
+  const defaultTrackTitle = titleEl?.textContent?.trim() || "Shag Archives Mix";
+  const defaultTrackMeta = metaEl?.textContent?.trim() || "Wachtend op selectie";
+  const defaultCover = artEl?.getAttribute("data-fallback-src") || artEl?.getAttribute("src") || "";
+
   const audio = new Audio();
   audio.preload = "auto";
   const DEFAULT_VOLUME = 0.8;
@@ -304,6 +334,29 @@ function initAudioPlayer() {
   let tracks = [];
   let activeTrackIndex = -1;
   let isSeeking = false;
+
+  const applyTrackDetail = track => {
+    if (titleEl) {
+      titleEl.textContent = track?.label ?? defaultTrackTitle;
+    }
+    if (metaEl) {
+      if (track) {
+        const meta = track.artist || track.album || (track.fileName ? prettifyTrackLabel(track.fileName) : null);
+        metaEl.textContent = meta || "Shag Archives";
+      } else {
+        metaEl.textContent = defaultTrackMeta;
+      }
+    }
+    if (artEl) {
+      const nextCover = track?.cover || defaultCover;
+      if (nextCover) {
+        artEl.src = nextCover;
+      }
+      artEl.alt = track ? `Album art voor ${track.label}` : "Album art placeholder";
+    }
+  };
+
+  applyTrackDetail(null);
 
   const setStatus = message => {
     statusEl.textContent = message;
@@ -367,6 +420,7 @@ function initAudioPlayer() {
 
   const selectTrack = index => {
     if (!tracks.length) {
+      applyTrackDetail(null);
       return;
     }
     const nextIndex = Number(index);
@@ -378,6 +432,7 @@ function initAudioPlayer() {
       resetProgress();
       updateDownloadLink(null);
       setStatus("Selecteer een track om te luisteren.");
+      applyTrackDetail(null);
       return;
     }
 
@@ -390,6 +445,7 @@ function initAudioPlayer() {
     audio.src = track.url;
     audio.load();
     setStatus(`Geselecteerd: ${track.label}. Druk op play.`);
+    applyTrackDetail(track);
 
     if (shouldResume) {
       const resumePlayback = () => {
@@ -460,6 +516,7 @@ function initAudioPlayer() {
       activeTrackIndex = -1;
       if (tracks.length) {
         populateSelect();
+        applyTrackDetail(null);
       } else {
         selectEl.disabled = true;
         if (emptyStateEl) {
@@ -468,6 +525,7 @@ function initAudioPlayer() {
         playerEl.dataset.state = "empty";
         setStatus("Geen audiobestanden gevonden. Werk de vaste playlist bij in script.js.");
         updateDownloadLink(null);
+        applyTrackDetail(null);
       }
     })
     .catch(error => {
@@ -478,6 +536,7 @@ function initAudioPlayer() {
       }
       playerEl.dataset.state = "error";
       setStatus("Kon de vaste playlist niet laden. Controleer je configuratie.");
+      applyTrackDetail(null);
     });
 
   selectEl.addEventListener("change", event => {
