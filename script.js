@@ -65,6 +65,8 @@ const PREFERENCE_KEYS = {
   accentColor: "shagwekker.preferences.accentColor"
 };
 
+const SHAGMETER_STORAGE_KEY = "shagwekker.shagmeter.state.v1";
+
 function readStoredPreference(key) {
   if (typeof window === "undefined" || !window.localStorage) {
     return null;
@@ -1002,6 +1004,199 @@ function updateCountdowns(events, compact, { timelineList } = {}) {
   return now;
 }
 
+function initShagMeter() {
+  const section = document.querySelector("[data-shagmeter]");
+  if (!section) {
+    return false;
+  }
+
+  const timelineList = section.querySelector("[data-shagmeter-timeline]");
+  const meterEl = section.querySelector("[data-shagmeter-meter]");
+  const fillEl = section.querySelector("[data-shagmeter-fill]");
+  const statusEl = section.querySelector("[data-shagmeter-status]");
+  const goalInput = section.querySelector("[data-shagmeter-goal]");
+  const goalValueEl = section.querySelector("[data-shagmeter-goal-value]");
+  const addButton = section.querySelector("[data-shagmeter-add]");
+  const resetButton = section.querySelector("[data-shagmeter-reset]");
+  const shagmeterCard = section.querySelector(".shagmeter-card");
+
+  if (
+    !timelineList ||
+    !meterEl ||
+    !fillEl ||
+    !statusEl ||
+    !goalInput ||
+    !goalValueEl ||
+    !addButton ||
+    !resetButton ||
+    !shagmeterCard
+  ) {
+    return false;
+  }
+
+  let timelineItem = null;
+
+  const renderTimelineCard = () => {
+    const now = new Date();
+    const customEvents = loadCustomEvents();
+    const events = getAllEvents(customEvents);
+
+    let soonest = null;
+    events.forEach(event => {
+      const next = nextOccurrenceFor(event, now);
+      const remain = next - now;
+      if (!soonest || remain < soonest.remain) {
+        soonest = { event, remain, next };
+      }
+    });
+
+    if (!soonest) {
+      timelineList.dataset.state = "empty";
+      timelineList.innerHTML = `
+        <li class="timeline__item timeline__item--empty">
+          <div class="timeline__decor" aria-hidden="true">
+            <span class="timeline__dot"></span>
+          </div>
+          <div class="timeline__body">
+            <p class="timeline__label">Geen cues gepland</p>
+            <p class="timeline__detail">Ga naar de planner om er eentje toe te voegen.</p>
+          </div>
+        </li>
+      `;
+      timelineItem = null;
+      return;
+    }
+
+    timelineList.dataset.state = "populated";
+    if (!timelineItem) {
+      timelineList.innerHTML = "";
+      timelineItem = createTimelineItem();
+      timelineList.appendChild(timelineItem);
+    }
+
+    const fallbackAccent = getCurrentAccentColor();
+    const accent = resolveHexColor(soonest.event.color, fallbackAccent);
+    updateTimelineItem(timelineItem, soonest, false, true, accent, fallbackAccent);
+  };
+
+  renderTimelineCard();
+  setInterval(renderTimelineCard, 1000);
+
+  const sliderMin = Number(goalInput.min) || 1;
+  const sliderMax = Number(goalInput.max) || 20;
+
+  const clampGoal = value => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return sliderMin;
+    }
+    return Math.min(sliderMax, Math.max(sliderMin, Math.round(numeric)));
+  };
+
+  const pluralizeShag = amount => {
+    if (amount === 1) {
+      return "1 shaggie";
+    }
+    return `${amount} shaggs`;
+  };
+
+  const loadState = () => {
+    try {
+      const stored = localStorage.getItem(SHAGMETER_STORAGE_KEY);
+      if (!stored) {
+        return null;
+      }
+      const parsed = JSON.parse(stored);
+      if (
+        parsed &&
+        typeof parsed === "object" &&
+        Number.isFinite(parsed.goal) &&
+        Number.isFinite(parsed.count)
+      ) {
+        return {
+          goal: clampGoal(parsed.goal),
+          count: Math.max(0, Math.floor(parsed.count))
+        };
+      }
+    } catch (error) {
+      console.warn("Unable to load shagmeter state", error);
+    }
+    return null;
+  };
+
+  const persistState = state => {
+    try {
+      localStorage.setItem(SHAGMETER_STORAGE_KEY, JSON.stringify(state));
+    } catch (error) {
+      console.warn("Unable to persist shagmeter state", error);
+    }
+  };
+
+  const defaultGoal = clampGoal(goalInput.value || sliderMin);
+  let state = loadState() || { goal: defaultGoal, count: 0 };
+
+  goalInput.value = state.goal;
+  if (state.count > state.goal) {
+    state.count = state.goal;
+    persistState(state);
+  }
+
+  const updateGoalValue = () => {
+    goalValueEl.textContent = pluralizeShag(state.goal);
+  };
+
+  const updateMeter = () => {
+    const safeGoal = state.goal > 0 ? state.goal : 1;
+    const ratio = Math.min(1, state.count / safeGoal);
+    fillEl.style.width = `${(ratio * 100).toFixed(2)}%`;
+    meterEl.setAttribute("aria-valuemax", String(state.goal));
+    meterEl.setAttribute("aria-valuenow", String(Math.min(state.count, state.goal)));
+    meterEl.setAttribute(
+      "aria-valuetext",
+      state.count >= state.goal
+        ? "Doel bereikt"
+        : `${pluralizeShag(state.count)} van ${pluralizeShag(state.goal)}`
+    );
+
+    const statusText =
+      state.count >= state.goal && state.goal > 0
+        ? `Doel bereikt! ${pluralizeShag(state.count)} genoteerd.`
+        : `${pluralizeShag(state.count)} van ${pluralizeShag(state.goal)} genoteerd.`;
+
+    statusEl.textContent = statusText;
+    shagmeterCard.classList.toggle("is-complete", state.count >= state.goal && state.goal > 0);
+    addButton.disabled = state.goal > 0 && state.count >= state.goal;
+  };
+
+  updateGoalValue();
+  updateMeter();
+
+  goalInput.addEventListener("input", event => {
+    state.goal = clampGoal(event.target.value);
+    goalInput.value = state.goal;
+    if (state.count > state.goal) {
+      state.count = state.goal;
+    }
+    updateGoalValue();
+    updateMeter();
+    persistState(state);
+  });
+
+  addButton.addEventListener("click", () => {
+    state.count = Math.min(state.goal, state.count + 1);
+    updateMeter();
+    persistState(state);
+  });
+
+  resetButton.addEventListener("click", () => {
+    state.count = 0;
+    updateMeter();
+    persistState(state);
+  });
+
+  return true;
+}
+
 function setAccentColor(color, { persist = false } = {}) {
   const resolved = resolveHexColor(color);
   document.documentElement.style.setProperty("--accent", resolved);
@@ -1082,6 +1277,7 @@ function setEditingState(event) {
   }
 
   initAudioPlayer();
+  initShagMeter();
 
   const customBoard = document.getElementById("customBoard");
   const timelineList = document.getElementById("timelineList");

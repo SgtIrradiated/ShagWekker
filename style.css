@@ -199,6 +199,164 @@ main {
   border-radius: var(--radius-md);
 }
 
+.meter-hero__media {
+  background: var(--surface);
+}
+
+.meter-section {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2rem, 5vw, 3rem);
+}
+
+.meter-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--grid-gap);
+}
+
+.meter-card {
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.meter-card__header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.meter-card__header p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+}
+
+.timeline--solo {
+  margin: 0;
+}
+
+.shagmeter-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.shagmeter-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(140deg, rgba(255, 255, 255, 0.04), transparent 60%);
+}
+
+.shagmeter-card.is-complete {
+  box-shadow: 0 20px 50px rgba(255, 0, 70, 0.3);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.shagmeter-card.is-complete .shagmeter__status {
+  color: var(--success);
+}
+
+.shagmeter__goal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shagmeter__goal label {
+  font-weight: 600;
+}
+
+.shagmeter__goal-control {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.shagmeter__goal-control input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.shagmeter__goal-value {
+  font-weight: 600;
+}
+
+.shagmeter__bar {
+  position: relative;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.shagmeter__fill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent), rgba(255, 108, 155, 0.9));
+  transition: width var(--transition);
+}
+
+.shagmeter__sparkle {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 10% 40%, rgba(255, 255, 255, 0.25), transparent 60%),
+    radial-gradient(circle at 70% 30%, rgba(255, 255, 255, 0.2), transparent 55%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.shagmeter__status {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.shagmeter__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.shagmeter__add {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--accent), rgba(255, 120, 200, 0.95));
+  border: none;
+  box-shadow: 0 12px 30px rgba(255, 0, 80, 0.35);
+}
+
+.shagmeter__add::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.25), transparent 60%);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.shagmeter__add:hover::after,
+.shagmeter__add:focus-visible::after {
+  opacity: 1;
+}
+
+.shagmeter-card.is-complete .shagmeter__add {
+  box-shadow: 0 12px 30px rgba(126, 247, 161, 0.4);
+  background: linear-gradient(135deg, var(--success), rgba(180, 255, 210, 0.95));
+}
+
+.shagmeter-card.is-complete .shagmeter__add::after {
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.3), transparent 60%);
+}
+
 .hero__media figcaption {
   font-size: 0.85rem;
   color: var(--muted);

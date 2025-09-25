@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ShagWekker · ShagMeter</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="page">
+    <header class="site-header" id="top">
+      <div class="brand" aria-label="ShagWekker">
+        <img src="assets/shag.png" alt="Placeholder logo illustration" class="brand__mark" />
+        <div class="brand__text">
+          <span class="brand__name">ShagWekker</span>
+          <span class="brand__tag">Je kan nooit genoeg Shag roken.</span>
+        </div>
+      </div>
+      <nav class="site-nav" aria-label="Primary">
+        <a href="index.html#hero">Shag</a>
+        <a href="index.html#planner">Nicotineteller</a>
+        <a href="index.html#customize">Inlassen</a>
+        <a href="index.html#insights">Insights</a>
+        <a href="shagmeter.html" aria-current="page">ShagMeter</a>
+        <a href="gallery.html">Gallery</a>
+        <a href="library.html">ShagFiles</a>
+      </nav>
+      <div class="header-actions">
+        <button class="btn ghost" id="contrastToggle" type="button" aria-pressed="false">High contrast</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero meter-hero" id="hero">
+        <div class="hero__content">
+          <p class="hero__eyebrow">Sla je volgende shag nooit over</p>
+          <h1 class="hero__title">ShagMeter.</h1>
+          <p class="hero__lead">
+            Hou de Nicotine Teller vibe levend op een aparte pagina. Een snelle blik geeft je direct de eerstvolgende shag cue én je dagelijkse shag-doel.
+          </p>
+          <div class="hero__actions">
+            <a class="btn primary" href="#meter">Ga naar de meter</a>
+            <a class="btn ghost" href="index.html#planner">Terug naar de planning</a>
+          </div>
+        </div>
+        <figure class="hero__media meter-hero__media">
+          <img src="assets/shag.png" alt="ShagMeter visual" loading="lazy" />
+        </figure>
+      </section>
+
+      <section class="meter-section" id="meter" data-shagmeter>
+        <header class="section-header">
+          <div>
+            <p class="section-header__eyebrow">Next up</p>
+            <h2>Jouw eerstvolgende shagmoment &amp; ShagMeter</h2>
+          </div>
+          <p class="section-header__hint">Koppelt de Nicotineteller aan een dagelijkse shag goal. Klik en vul die meter.</p>
+        </header>
+
+        <div class="meter-layout">
+          <article class="meter-card">
+            <header class="meter-card__header">
+              <h3>Volgende cue</h3>
+              <p>Direct gekloond uit de Nicotineteller.</p>
+            </header>
+            <ol class="timeline timeline--solo" data-shagmeter-timeline aria-live="polite"></ol>
+          </article>
+
+          <article class="meter-card shagmeter-card">
+            <header class="meter-card__header">
+              <h3>ShagMeter</h3>
+              <p>Tel je shaggies tot je doel bereikt is.</p>
+            </header>
+            <div class="shagmeter__goal">
+              <label for="shagmeterGoal">Dagelijkse shag goal</label>
+              <div class="shagmeter__goal-control">
+                <input
+                  id="shagmeterGoal"
+                  type="range"
+                  min="1"
+                  max="20"
+                  step="1"
+                  value="8"
+                  data-shagmeter-goal
+                  aria-label="Dagelijkse shag goal"
+                />
+                <span class="shagmeter__goal-value" data-shagmeter-goal-value>8 shaggs</span>
+              </div>
+            </div>
+
+            <div
+              class="shagmeter__bar"
+              role="meter"
+              aria-valuemin="0"
+              aria-valuemax="8"
+              aria-valuenow="0"
+              aria-label="ShagMeter voortgang"
+              data-shagmeter-meter
+            >
+              <div class="shagmeter__fill" data-shagmeter-fill></div>
+              <div class="shagmeter__sparkle" aria-hidden="true"></div>
+            </div>
+
+            <p class="shagmeter__status" data-shagmeter-status>0 van 8 shaggs genoteerd.</p>
+
+            <div class="shagmeter__actions">
+              <button class="btn primary shagmeter__add" type="button" data-shagmeter-add>+Shaggie</button>
+              <button class="btn ghost" type="button" data-shagmeter-reset>Reset</button>
+            </div>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>&copy; <span id="footerYear"></span> ShagWekker. Shag kun je helaas niet eten, maar wel lekker roken.</p>
+      <a class="back-to-top" href="#top">Back to top</a>
+    </footer>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
