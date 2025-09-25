@@ -80,26 +80,20 @@
       </section>
 
       <section class="planner" id="planner">
-        <div class="planner__primary">
-          <header class="section-header">
-            <div>
-              <p class="section-header__eyebrow">Standaard Landstede Shagpauzes</p>
-              <h2>Dagelijkse Kost</h2>
-            </div>
-            <p class="section-header__hint"><i>“Nicotine is a performance enhancing drug”</i></p>
-          </header>
-          <div id="defaultBoard" class="card-grid" role="list"></div>
-        </div>
-        <aside class="planner__sidebar" aria-label="Upcoming timeline">
+        <div class="planner__sidebar planner__sidebar--main" aria-label="Upcoming timeline">
           <header class="section-header">
             <div>
               <p class="section-header__eyebrow">What&rsquo;s on deck</p>
-              <h2>Nicotine Teller</h2>
+              <h2>Nicotineteller</h2>
+              <p class="section-header__hint">Core pauzes en je eigen rituelen lopen hier realtime mee.</p>
             </div>
-            <button class="btn ghost" id="precisionToggle" type="button" aria-pressed="false">Compact view</button>
+            <div class="planner__controls">
+              <button class="btn ghost" id="precisionToggle" type="button" aria-pressed="false">Compact view</button>
+            </div>
           </header>
+          <p class="planner__intro">Laat de glimmende timeline jouw volgende shagmoment aftellen &mdash; standaard cues en persoonlijke inlassingen smelten samen.</p>
           <ol id="timelineList" class="timeline" aria-live="polite"></ol>
-        </aside>
+        </div>
       </section>
 
       <section class="customize" id="customize">
@@ -148,7 +142,7 @@
         <div class="customize__board">
           <div class="customize__board-header">
             <h3>Ingelasde ShagPauzes Overzicht</h3>
-            <p id="customEmptyState" class="custom-empty">Add your first cue to see it appear here.</p>
+            <p id="customEmptyState" class="custom-empty">Las een ShagPauze in, en bewerk ze hier!</p>
           </div>
           <div id="customBoard" class="card-grid card-grid--compact" role="list"></div>
           <figure class="customize__placeholder">

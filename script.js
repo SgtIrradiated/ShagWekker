@@ -33,6 +33,8 @@ const DEFAULT_EVENTS = [
   }
 ];
 
+const DEFAULT_EVENT_IDS = new Set(DEFAULT_EVENTS.map(event => event.id));
+
 const STORAGE_KEY = "shagwekker.customEvents.v1";
 const LEGACY_KEY = "multiCountdown.times";
 const SUMMARY_MESSAGES = [
@@ -772,15 +774,6 @@ function buildEventCard(event, source = "core") {
   return card;
 }
 
-function renderDefaultBoard(container) {
-  container.innerHTML = "";
-  [...DEFAULT_EVENTS]
-    .sort((a, b) => toMinutes(a.time) - toMinutes(b.time))
-    .forEach(event => {
-      container.appendChild(buildEventCard(event));
-    });
-}
-
 function renderCustomBoard(container, events, emptyStateEl) {
   container.innerHTML = "";
   if (!events.length) {
@@ -793,72 +786,155 @@ function renderCustomBoard(container, events, emptyStateEl) {
   });
 }
 
-function buildTimeline(listEl, events, compact) {
-  listEl.innerHTML = "";
-  listEl.classList.toggle("timeline--compact", Boolean(compact));
-  listEl.dataset.state = events.length ? "populated" : "empty";
+function createTimelineItem() {
+  const item = document.createElement("li");
+  item.className = "timeline__item";
+  item.innerHTML = `
+    <div class="timeline__decor" aria-hidden="true">
+      <span class="timeline__dot"></span>
+      <span class="timeline__glow"></span>
+    </div>
+    <div class="timeline__body">
+      <header class="timeline__header">
+        <div class="timeline__header-main">
+          <p class="timeline__label"></p>
+          <p class="timeline__detail" hidden></p>
+        </div>
+        <div class="timeline__eta">
+          <span class="timeline__count-label">Next in</span>
+          <span class="timeline__countdown" data-countdown aria-live="off">--</span>
+        </div>
+      </header>
+      <div class="timeline__meta">
+        <time class="timeline__time" datetime=""></time>
+        <span class="timeline__pill"></span>
+      </div>
+      <div class="timeline__progress" role="img" aria-label="">
+        <span class="timeline__progress-fill"></span>
+      </div>
+    </div>
+  `;
+  return item;
+}
 
-  const now = new Date();
+function updateTimelineItem(item, entry, compact, isNext, accent, fallbackAccent) {
+  item.dataset.id = entry.event.id;
+  item.dataset.next = entry.next.toISOString();
+  item.dataset.color = accent;
+  item.style.setProperty("--timeline-accent", accent);
+  item.classList.toggle("is-next", Boolean(isNext));
+
+  const labelEl = item.querySelector(".timeline__label");
+  const detailEl = item.querySelector(".timeline__detail");
+  const countdownEl = item.querySelector(".timeline__countdown");
+  const timeEl = item.querySelector(".timeline__time");
+  const pillEl = item.querySelector(".timeline__pill");
+  const progressEl = item.querySelector(".timeline__progress");
+  const progressFill = item.querySelector(".timeline__progress-fill");
+
+  if (labelEl) {
+    labelEl.textContent = entry.event.label;
+  }
+
+  const detail = entry.event.notes?.trim() || entry.event.description || "";
+  if (detailEl) {
+    if (detail) {
+      detailEl.textContent = detail;
+      detailEl.hidden = false;
+    } else {
+      detailEl.textContent = "";
+      detailEl.hidden = true;
+    }
+  }
+
+  const countdownText = formatCountdown(diffParts(entry.remain), compact);
+  if (countdownEl) {
+    countdownEl.textContent = countdownText;
+  }
+
+  if (timeEl) {
+    timeEl.dateTime = entry.event.time;
+    timeEl.textContent = entry.event.time;
+  }
+
+  if (pillEl) {
+    pillEl.textContent = recurrenceTag(entry.event.recurrence);
+  }
+
   const dayWindow = 24 * 60 * 60 * 1000;
-  const entries = events.map(event => {
-    const next = nextOccurrenceFor(event, now);
-    const remain = next - now;
-    return {
-      event,
-      next,
-      remain,
-      countdown: diffParts(remain)
-    };
-  });
+  const relativeProgress = 1 - Math.max(0, Math.min(1, entry.remain / dayWindow));
+  const progressPercent = relativeProgress <= 0 ? 0 : Math.max(1, Math.round(relativeProgress * 100));
+  const progressLabel = progressPercent <= 0
+    ? "Cue is more than a day away"
+    : `${progressPercent}% of today's rhythm complete before this cue`;
 
-  entries.sort((a, b) => a.remain - b.remain);
-  entries.slice(0, 6).forEach(entry => {
-    const accent = resolveHexColor(entry.event.color, getCurrentAccentColor());
-    const detail = entry.event.notes?.trim() || entry.event.description || "";
-    const relativeProgress = 1 - Math.max(0, Math.min(1, entry.remain / dayWindow));
-    const progressPercent = relativeProgress <= 0 ? 0 : Math.max(1, Math.round(relativeProgress * 100));
-    const progressLabel = progressPercent <= 0
-      ? "Cue is more than a day away"
-      : `${progressPercent}% of today's rhythm complete before this cue`;
+  if (progressEl) {
+    progressEl.setAttribute("aria-label", progressLabel);
+  }
+  if (progressFill) {
+    progressFill.style.width = `${progressPercent}%`;
+  }
 
-    const item = document.createElement("li");
-    item.className = "timeline__item";
-    item.dataset.color = accent;
-    item.style.setProperty("--timeline-accent", accent);
-    item.innerHTML = `
+  const glow = item.querySelector(".timeline__glow");
+  const dot = item.querySelector(".timeline__dot");
+  const accentColor = accent || fallbackAccent;
+  if (glow) {
+    glow.style.setProperty("--timeline-accent", accentColor);
+  }
+  if (dot) {
+    dot.style.setProperty("--timeline-accent", accentColor);
+  }
+}
+
+function renderTimeline(listEl, events, compact, now = new Date(), soonest = null) {
+  if (!listEl) return;
+
+  listEl.classList.toggle("timeline--compact", Boolean(compact));
+
+  const fallbackAccent = getCurrentAccentColor();
+  const entries = events
+    .map(event => {
+      const next = nextOccurrenceFor(event, now);
+      const remain = next - now;
+      return { event, next, remain };
+    })
+    .filter(entry => Number.isFinite(entry.remain))
+    .sort((a, b) => a.remain - b.remain)
+    .slice(0, 6);
+
+  if (!entries.length) {
+    listEl.dataset.state = "empty";
+    const empty = document.createElement("li");
+    empty.className = "timeline__item timeline__item--empty";
+    empty.innerHTML = `
       <div class="timeline__decor" aria-hidden="true">
         <span class="timeline__dot"></span>
-        <span class="timeline__glow"></span>
       </div>
       <div class="timeline__body">
-        <header class="timeline__header">
-          <p class="timeline__label">${entry.event.label}</p>
-          <time class="timeline__time" datetime="${entry.event.time}">${entry.event.time}</time>
-        </header>
-        ${detail ? `<p class="timeline__detail">${detail}</p>` : ""}
-        <div class="timeline__meta">
-          <span class="timeline__pill">${recurrenceTag(entry.event.recurrence)}</span>
-          <span class="timeline__count"><span class="timeline__count-label">Next in</span>${formatCountdown(entry.countdown, compact)}</span>
-        </div>
-        <div class="timeline__progress" role="img" aria-label="${progressLabel}">
-          <span style="--fill: ${progressPercent}%"></span>
-        </div>
+        <p class="timeline__label">No cues scheduled</p>
+        <p class="timeline__detail">Add a personal cue or tweak the rhythm to see it light up here.</p>
       </div>
     `;
-    listEl.appendChild(item);
+    listEl.replaceChildren(empty);
+    return;
+  }
+
+  listEl.dataset.state = "populated";
+  const existingItems = new Map(
+    Array.from(listEl.children)
+      .filter(item => item.dataset?.id)
+      .map(item => [item.dataset.id, item])
+  );
+  const fragment = document.createDocumentFragment();
+
+  entries.forEach(entry => {
+    const accent = resolveHexColor(entry.event.color, fallbackAccent);
+    const item = existingItems.get(entry.event.id) || createTimelineItem();
+    updateTimelineItem(item, entry, compact, soonest && soonest.event.id === entry.event.id, accent, fallbackAccent);
+    fragment.appendChild(item);
   });
 
-  if (!listEl.children.length) {
-    const item = document.createElement("li");
-    item.className = "timeline__item timeline__item--empty";
-    item.innerHTML = `
-      <div class="timeline__body">
-        <p class="timeline__label">Add a cue to populate the timeline.</p>
-        <p class="timeline__detail">Your saved reminders will animate into this timeline once you create them.</p>
-      </div>
-    `;
-    listEl.appendChild(item);
-  }
+  listEl.replaceChildren(fragment);
 }
 
 function updateSummaries(now, events, soonest) {
@@ -866,7 +942,7 @@ function updateSummaries(now, events, soonest) {
   liveClock.textContent = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   const customSummaryCount = document.getElementById("customSummaryCount");
-  const customCount = events.filter(evt => !DEFAULT_EVENTS.find(def => def.id === evt.id)).length;
+  const customCount = events.filter(evt => !DEFAULT_EVENT_IDS.has(evt.id)).length;
   customSummaryCount.textContent = customCount;
 
   const nextEventName = document.getElementById("nextEventName");
@@ -897,26 +973,31 @@ function highlightSoonestCard(soonest) {
   }
 }
 
-function updateCountdowns(events, compact) {
+function updateCountdowns(events, compact, { timelineList } = {}) {
   const now = new Date();
   let soonest = null;
 
   events.forEach(event => {
-    const card = document.querySelector(`.event-card[data-id="${event.id}"]`);
-    if (!card) return;
     const next = nextOccurrenceFor(event, now);
     const remain = next - now;
-    const parts = diffParts(remain);
+    if (!soonest || remain < soonest.remain) {
+      soonest = { event, remain, next };
+    }
+
+    const card = document.querySelector(`.event-card[data-id="${event.id}"]`);
+    if (!card) {
+      return;
+    }
     const countEl = card.querySelector(".event-card__count");
     if (countEl) {
-      countEl.textContent = formatCountdown(parts, compact);
-    }
-    if (!soonest || remain < soonest.remain) {
-      soonest = { event, remain };
+      countEl.textContent = formatCountdown(diffParts(remain), compact);
     }
   });
 
   highlightSoonestCard(soonest);
+  if (timelineList) {
+    renderTimeline(timelineList, events, compact, now, soonest);
+  }
   updateSummaries(now, events, soonest);
   return now;
 }
@@ -1002,7 +1083,6 @@ function setEditingState(event) {
 
   initAudioPlayer();
 
-  const defaultBoard = document.getElementById("defaultBoard");
   const customBoard = document.getElementById("customBoard");
   const timelineList = document.getElementById("timelineList");
   const customEmptyState = document.getElementById("customEmptyState");
@@ -1013,7 +1093,6 @@ function setEditingState(event) {
   const createEventForm = document.getElementById("createEventForm");
 
   const plannerElementsReady =
-    defaultBoard &&
     customBoard &&
     timelineList &&
     customEmptyState &&
@@ -1031,10 +1110,8 @@ function setEditingState(event) {
   let compactMode = false;
 
   const renderAll = () => {
-    renderDefaultBoard(defaultBoard);
     renderCustomBoard(customBoard, customEvents, customEmptyState);
-    buildTimeline(timelineList, getAllEvents(customEvents), compactMode);
-    updateCountdowns(getAllEvents(customEvents), compactMode);
+    updateCountdowns(getAllEvents(customEvents), compactMode, { timelineList });
   };
 
   renderAll();
@@ -1043,8 +1120,7 @@ function setEditingState(event) {
     compactMode = !compactMode;
     precisionToggle.setAttribute("aria-pressed", String(compactMode));
     precisionToggle.textContent = compactMode ? "Detailed view" : "Compact view";
-    buildTimeline(timelineList, getAllEvents(customEvents), compactMode);
-    updateCountdowns(getAllEvents(customEvents), compactMode);
+    updateCountdowns(getAllEvents(customEvents), compactMode, { timelineList });
   });
 
   demoButton.addEventListener("click", () => {
@@ -1146,9 +1222,6 @@ function setEditingState(event) {
   });
 
   setInterval(() => {
-    const now = updateCountdowns(getAllEvents(customEvents), compactMode);
-    if (now.getSeconds() % 5 === 0) {
-      buildTimeline(timelineList, getAllEvents(customEvents), compactMode);
-    }
+    updateCountdowns(getAllEvents(customEvents), compactMode, { timelineList });
   }, 1000);
 })();
