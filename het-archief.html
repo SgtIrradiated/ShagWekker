@@ -60,7 +60,16 @@
       const archiveContainer = document.querySelector("[data-archive]");
       if (!archiveContainer) return;
 
-      const dataSource = archiveContainer.getAttribute("data-archive-source") || "HetArchief/videos.json";
+      const fallbackSource = "HetArchief/videos.json";
+      const sourceAttr = archiveContainer.getAttribute("data-archive-source");
+
+      let resolvedSource;
+      try {
+        resolvedSource = new URL(sourceAttr || fallbackSource, document.baseURI).href;
+      } catch (error) {
+        console.warn("Onbekende data-URL, val terug op standaardbron.", error);
+        resolvedSource = new URL(fallbackSource, document.baseURI).href;
+      }
 
       const renderPlaceholder = (message, index = null) => {
         const card = document.createElement("article");
@@ -81,17 +90,19 @@
         card.className = "archive-video";
         card.setAttribute("role", "listitem");
 
-        if (item.src) {
+        const src = item?.src?.toString().trim();
+        if (src) {
           const video = document.createElement("video");
           video.className = "archive-video__player";
           video.controls = true;
           video.preload = "metadata";
-          if (item.poster) {
-            video.poster = item.poster;
+          const poster = item?.poster?.toString().trim();
+          if (poster) {
+            video.poster = poster;
           }
 
           const source = document.createElement("source");
-          source.src = item.src;
+          source.src = src;
           source.type = item.type || "video/mp4";
           video.appendChild(source);
           video.insertAdjacentText("beforeend", "Je browser ondersteunt het video-element niet.");
@@ -104,7 +115,7 @@
 
         const title = document.createElement("h3");
         title.className = "archive-video__title";
-        title.textContent = item.title || `Video ${index + 1}`;
+        title.textContent = item.title?.toString().trim() || `Video ${index + 1}`;
         card.appendChild(title);
 
         if (item.description) {
@@ -117,29 +128,50 @@
         archiveContainer.appendChild(card);
       };
 
-      fetch(dataSource)
-        .then((response) => {
+      const hydrateArchive = async () => {
+        if (typeof fetch !== "function") {
+          renderPlaceholder("Je browser ondersteunt het laden van het archief niet.");
+          return;
+        }
+
+        let payload = null;
+        try {
+          const response = await fetch(resolvedSource, { cache: "no-store" });
           if (!response.ok) {
             throw new Error(`Kan archiefdata niet laden (${response.status})`);
           }
-          return response.json();
-        })
-        .then((data) => {
-          if (data && data.instructions) {
-            console.info(`Archiefhandleiding: ${data.instructions}`);
-          }
 
-          if (!data || !Array.isArray(data.videos) || data.videos.length === 0) {
-            renderPlaceholder("Voeg video's toe aan videos.json om ze hier te tonen.");
+          const raw = await response.text();
+          if (!raw.trim()) {
+            renderPlaceholder("videos.json is leeg. Voeg video's toe om ze te tonen.");
             return;
           }
 
-          data.videos.forEach((item, index) => renderVideoCard(item, index));
-        })
-        .catch((error) => {
+          try {
+            payload = JSON.parse(raw);
+          } catch (parseError) {
+            throw new Error("videos.json bevat geen geldige JSON.", { cause: parseError });
+          }
+        } catch (error) {
           console.error(error);
           renderPlaceholder("Kon de archieflijst niet laden. Controleer videos.json.");
-        });
+          return;
+        }
+
+        if (payload?.instructions) {
+          console.info(`Archiefhandleiding: ${payload.instructions}`);
+        }
+
+        const entries = Array.isArray(payload?.videos) ? payload.videos : [];
+        if (entries.length === 0) {
+          renderPlaceholder("Voeg video's toe aan videos.json om ze hier te tonen.");
+          return;
+        }
+
+        entries.forEach((item, index) => renderVideoCard(item, index));
+      };
+
+      hydrateArchive();
     })();
   </script>
 </body>
