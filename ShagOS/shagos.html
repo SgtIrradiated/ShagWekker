@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ShagOS v1.0</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/shagos.css" />
+  </head>
+  <body class="shagos-body theme-glass">
+    <div id="shagos-root" class="shagos" aria-live="polite">
+      <section class="shagos-splash" id="shagosSplash" role="status" aria-label="Booting ShagOS">
+        <div class="shagos-splash__glass">
+          <div class="shagos-splash__logo">ShagOS</div>
+          <p class="shagos-splash__hint">v1.0 · Loading your desktop</p>
+          <div class="shagos-splash__progress" aria-hidden="true">
+            <span class="shagos-splash__bar" id="splashProgress"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="shagos-desktop" id="shagosDesktop" hidden>
+        <div class="shagos-desktop__wallpaper" id="wallpaperLayer" role="img" aria-label="Desktop wallpaper"></div>
+        <div class="shagos-desktop__layer">
+          <div class="shagos-window-layer" id="windowLayer" aria-live="polite"></div>
+
+          <nav class="shagos-taskbar" aria-label="Taskbar">
+            <div class="shagos-taskbar__left">
+              <button class="shagos-icon-button" id="launcherButton" aria-haspopup="true" aria-expanded="false">
+                <img src="assets/icons/launcher.svg" alt="Open launcher" />
+              </button>
+              <div class="shagos-launcher" id="launcher" role="menu" aria-hidden="true">
+                <header class="shagos-launcher__header">
+                  <h2>ShagOS Launcher</h2>
+                  <p>Open apps and explore the desktop.</p>
+                </header>
+                <div class="shagos-launcher__grid" role="menu">
+                  <button class="shagos-launcher__item" data-app="settings" role="menuitem">
+                    <span class="shagos-launcher__icon">
+                      <img src="assets/icons/settings.svg" alt="" aria-hidden="true" />
+                    </span>
+                    <span class="shagos-launcher__label">Settings</span>
+                  </button>
+                  <button class="shagos-launcher__item" data-app="shagpad" role="menuitem">
+                    <span class="shagos-launcher__icon">
+                      <img src="assets/icons/notepad.svg" alt="" aria-hidden="true" />
+                    </span>
+                    <span class="shagos-launcher__label">ShagPad</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="shagos-taskbar__center" role="tablist" aria-label="Open applications" id="taskbarApps"></div>
+
+            <div class="shagos-taskbar__right">
+              <button class="shagos-icon-button" id="volumeTray" aria-label="Volume" aria-haspopup="true" aria-expanded="false">
+                <img src="assets/icons/volume.svg" alt="Volume" />
+              </button>
+              <button class="shagos-icon-button" data-open-app="settings" aria-label="Open settings">
+                <img src="assets/icons/settings.svg" alt="Settings" />
+              </button>
+              <time class="shagos-taskbar__clock" id="taskbarClock" aria-live="polite">--:--</time>
+            </div>
+          </nav>
+        </div>
+      </section>
+    </div>
+
+    <audio id="bootChime" src="assets/sounds/boot-chime.wav" preload="auto"></audio>
+    <audio id="uiClick" src="assets/sounds/ui-click.wav" preload="auto"></audio>
+
+    <script type="module" src="js/shagos.js"></script>
+  </body>
+</html>

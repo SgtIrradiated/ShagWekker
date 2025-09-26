@@ -1,0 +1,716 @@
+:root {
+  color-scheme: dark light;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --shagos-radius-lg: 20px;
+  --shagos-radius-md: 16px;
+  --shagos-radius-sm: 12px;
+  --shagos-glass-bg: rgba(15, 23, 42, 0.55);
+  --shagos-glass-border: rgba(148, 163, 184, 0.18);
+  --shagos-glass-shadow: 0 20px 60px rgba(15, 23, 42, 0.45);
+  --shagos-accent: #38bdf8;
+  --shagos-accent-strong: #0ea5e9;
+  --shagos-text-strong: #f8fafc;
+  --shagos-text-muted: rgba(241, 245, 249, 0.7);
+  --shagos-focus: rgba(14, 165, 233, 0.45);
+  --shagos-window-bg: rgba(15, 23, 42, 0.7);
+  --shagos-window-border: rgba(148, 163, 184, 0.22);
+  --shagos-window-shadow: 0 18px 45px rgba(15, 23, 42, 0.5);
+  --shagos-taskbar-bg: rgba(15, 23, 42, 0.62);
+  --shagos-taskbar-border: rgba(148, 163, 184, 0.2);
+  --shagos-surface-light: rgba(255, 255, 255, 0.6);
+  --shagos-surface-dark: rgba(15, 23, 42, 0.8);
+}
+
+body,
+html {
+  margin: 0;
+  height: 100%;
+  background: #0f172a;
+  color: var(--shagos-text-strong);
+}
+
+.shagos-body {
+  min-height: 100%;
+  display: flex;
+  background: #0b1120;
+}
+
+.shagos-body.theme-light {
+  background: #f1f5f9;
+  color: #0f172a;
+  --shagos-text-strong: #0f172a;
+  --shagos-text-muted: rgba(15, 23, 42, 0.65);
+  --shagos-window-bg: rgba(255, 255, 255, 0.75);
+  --shagos-window-border: rgba(148, 163, 184, 0.25);
+  --shagos-taskbar-bg: rgba(255, 255, 255, 0.75);
+  --shagos-taskbar-border: rgba(148, 163, 184, 0.25);
+  --shagos-glass-bg: rgba(255, 255, 255, 0.65);
+  --shagos-glass-border: rgba(148, 163, 184, 0.2);
+  --shagos-window-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+  --shagos-glass-shadow: 0 20px 40px rgba(15, 23, 42, 0.15);
+}
+
+.shagos-body.theme-dark {
+  background: #020617;
+  color: #e2e8f0;
+  --shagos-text-strong: #e2e8f0;
+  --shagos-text-muted: rgba(226, 232, 240, 0.65);
+  --shagos-window-bg: rgba(15, 23, 42, 0.88);
+  --shagos-window-border: rgba(148, 163, 184, 0.28);
+  --shagos-taskbar-bg: rgba(15, 23, 42, 0.85);
+  --shagos-taskbar-border: rgba(148, 163, 184, 0.24);
+}
+
+.shagos {
+  display: flex;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+.shagos-splash {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.4), transparent 55%),
+    radial-gradient(circle at 80% 20%, rgba(168, 85, 247, 0.45), transparent 60%),
+    #020617;
+  color: #f8fafc;
+  z-index: 999;
+  transition: opacity 0.6s ease;
+}
+
+.shagos-splash[hidden] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.shagos-splash__glass {
+  padding: 48px 64px;
+  border-radius: 32px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  box-shadow: var(--shagos-glass-shadow);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  text-align: center;
+}
+
+.shagos-splash__logo {
+  font-size: clamp(2.8rem, 4vw, 3.4rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.shagos-splash__hint {
+  margin: 12px 0 32px;
+  font-weight: 500;
+  color: var(--shagos-text-muted);
+}
+
+.shagos-splash__progress {
+  position: relative;
+  height: 6px;
+  width: 240px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.25);
+  overflow: hidden;
+}
+
+.shagos-splash__bar {
+  display: block;
+  height: 100%;
+  width: 20%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--shagos-accent), var(--shagos-accent-strong));
+  transform: translateX(-100%);
+  animation: shagos-boot 2.4s ease forwards;
+}
+
+@keyframes shagos-boot {
+  0% {
+    transform: translateX(-100%);
+  }
+  20% {
+    transform: translateX(-40%);
+  }
+  60% {
+    transform: translateX(45%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shagos-desktop {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.shagos-desktop__wallpaper {
+  position: fixed;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  filter: saturate(1.05);
+  transition: opacity 0.6s ease;
+}
+
+.shagos-desktop__layer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.shagos-window-layer {
+  flex: 1;
+  position: relative;
+  padding: 40px clamp(12px, 4vw, 36px);
+  display: grid;
+  align-content: flex-start;
+}
+
+.shagos-window {
+  position: fixed;
+  min-width: 320px;
+  max-width: 680px;
+  min-height: 200px;
+  border-radius: var(--shagos-radius-lg);
+  border: 1px solid var(--shagos-window-border);
+  background: var(--shagos-window-bg);
+  box-shadow: var(--shagos-window-shadow);
+  backdrop-filter: blur(28px) saturate(140%);
+  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  pointer-events: auto;
+  transform: translateZ(0);
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.shagos-window.is-minimized {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.92);
+}
+
+.shagos-window.is-blurred {
+  border-color: rgba(148, 163, 184, 0.12);
+  box-shadow: 0 12px 36px rgba(15, 23, 42, 0.3);
+  opacity: 0.92;
+}
+
+.shagos-window__titlebar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: rgba(15, 23, 42, 0.35);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  cursor: grab;
+  user-select: none;
+}
+
+.shagos-window__titlebar:active {
+  cursor: grabbing;
+}
+
+.shagos-window__title {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.shagos-window__controls {
+  display: flex;
+  gap: 8px;
+}
+
+.shagos-window__button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: rgba(148, 163, 184, 0.08);
+  color: var(--shagos-text-strong);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.shagos-window__button:hover,
+.shagos-window__button:focus-visible {
+  background: rgba(56, 189, 248, 0.25);
+  border-color: rgba(56, 189, 248, 0.45);
+  outline: none;
+}
+
+.shagos-window__body {
+  flex: 1;
+  padding: 16px 20px 24px;
+  overflow: auto;
+}
+
+.shagos-window__resize {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  width: 18px;
+  height: 18px;
+  border-bottom: 2px solid rgba(148, 163, 184, 0.5);
+  border-right: 2px solid rgba(148, 163, 184, 0.5);
+  cursor: se-resize;
+}
+
+.shagos-taskbar {
+  position: relative;
+  margin: auto clamp(10px, 4vw, 28px) clamp(10px, 4vw, 24px);
+  padding: 12px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--shagos-taskbar-border);
+  background: var(--shagos-taskbar-bg);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(28px) saturate(120%);
+  -webkit-backdrop-filter: blur(28px) saturate(120%);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: clamp(12px, 3vw, 36px);
+  pointer-events: auto;
+}
+
+.shagos-taskbar__left,
+.shagos-taskbar__center,
+.shagos-taskbar__right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.shagos-taskbar__center {
+  justify-content: center;
+  flex: 1;
+}
+
+.shagos-taskbar__clock {
+  min-width: 64px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.shagos-icon-button {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  border: 1px solid transparent;
+  background: rgba(148, 163, 184, 0.12);
+  display: grid;
+  place-items: center;
+  transition: transform 0.2s ease, background 0.2s ease, border 0.2s ease;
+}
+
+.shagos-icon-button img {
+  width: 24px;
+  height: 24px;
+}
+
+.shagos-icon-button:focus-visible,
+.shagos-icon-button:hover {
+  background: rgba(56, 189, 248, 0.28);
+  border-color: rgba(56, 189, 248, 0.5);
+  outline: none;
+  transform: translateY(-2px);
+}
+
+.shagos-launcher {
+  position: absolute;
+  bottom: 80px;
+  left: clamp(16px, 5vw, 60px);
+  width: min(420px, 90vw);
+  padding: 28px;
+  border-radius: 32px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.85);
+  box-shadow: var(--shagos-window-shadow);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  transform-origin: bottom left;
+  transform: translateY(20px) scale(0.96);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.shagos-launcher[aria-hidden='false'] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.shagos-launcher__header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.shagos-launcher__header p {
+  margin: 4px 0 18px;
+  color: var(--shagos-text-muted);
+}
+
+.shagos-launcher__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 18px;
+}
+
+.shagos-launcher__item {
+  border-radius: 20px;
+  border: 1px solid transparent;
+  padding: 18px 16px;
+  background: rgba(148, 163, 184, 0.08);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  color: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease, border 0.2s ease;
+}
+
+.shagos-launcher__item:hover,
+.shagos-launcher__item:focus-visible {
+  outline: none;
+  transform: translateY(-4px);
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.shagos-launcher__icon img {
+  width: 32px;
+  height: 32px;
+}
+
+.shagos-taskbar__center button {
+  position: relative;
+  border-radius: 16px;
+  padding: 10px 16px;
+  border: 1px solid transparent;
+  background: rgba(148, 163, 184, 0.12);
+  color: inherit;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, border 0.2s ease;
+}
+
+.shagos-taskbar__center button[data-active='true'] {
+  background: rgba(56, 189, 248, 0.26);
+  border-color: rgba(56, 189, 248, 0.45);
+  box-shadow: 0 8px 24px rgba(56, 189, 248, 0.28);
+}
+
+.shagos-taskbar__center button:hover,
+.shagos-taskbar__center button:focus-visible {
+  outline: none;
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.4);
+  transform: translateY(-2px);
+}
+
+
+.shagos-taskbar__center button img {
+  width: 20px;
+  height: 20px;
+}
+.shagos-taskbar__center button[data-badge='true']::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #38bdf8;
+}
+
+/* Settings styles */
+.shagos-settings {
+  display: grid;
+  gap: 24px;
+}
+
+.shagos-settings__group {
+  background: rgba(148, 163, 184, 0.08);
+  border-radius: var(--shagos-radius-md);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  padding: 20px;
+}
+
+.shagos-settings__group h3 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+}
+
+.shagos-settings__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.shagos-settings__option:last-child {
+  border-bottom: none;
+}
+
+.shagos-settings__option label {
+  font-weight: 500;
+}
+
+.shagos-settings__wallpapers {
+  display: grid;
+  gap: 12px;
+}
+
+.shagos-settings__wallpapers button {
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: var(--shagos-radius-md);
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  height: 120px;
+}
+
+.shagos-settings__wallpapers button img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.shagos-settings__wallpapers button[data-selected='true'] {
+  border-color: rgba(56, 189, 248, 0.65);
+  box-shadow: 0 12px 30px rgba(56, 189, 248, 0.25);
+}
+
+.shagos-settings__theme {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.shagos-chip {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.12);
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s ease, border 0.2s ease, transform 0.2s ease;
+}
+
+.shagos-chip[data-selected='true'] {
+  background: rgba(56, 189, 248, 0.24);
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+.shagos-chip:focus-visible,
+.shagos-chip:hover {
+  outline: none;
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.35);
+  transform: translateY(-1px);
+}
+
+.shagos-slider {
+  width: 220px;
+}
+
+.shagos-about {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--shagos-text-muted);
+}
+
+.shagos-notice {
+  margin-top: 8px;
+  padding: 12px 16px;
+  border-radius: var(--shagos-radius-sm);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.15);
+  color: #fee2e2;
+}
+
+/* ShagPad */
+.shagpad {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: 16px;
+}
+
+.shagpad__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.shagpad__toolbar button {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.12);
+  color: inherit;
+  padding: 10px 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, border 0.2s ease, transform 0.2s ease;
+}
+
+.shagpad__toolbar button:hover,
+.shagpad__toolbar button:focus-visible {
+  outline: none;
+  background: rgba(56, 189, 248, 0.18);
+  border-color: rgba(56, 189, 248, 0.4);
+  transform: translateY(-2px);
+}
+
+.shagpad__select {
+  border-radius: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.3);
+  color: inherit;
+  padding: 8px 12px;
+  min-width: 160px;
+}
+
+.shagpad__editor {
+  flex: 1;
+  min-height: 260px;
+  border-radius: var(--shagos-radius-md);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.35);
+  color: inherit;
+  padding: 18px;
+  font-size: 1rem;
+  line-height: 1.6;
+  resize: none;
+}
+
+.shagpad__editor:focus {
+  outline: 2px solid rgba(56, 189, 248, 0.45);
+}
+
+/* Volume popover */
+.shagos-volume-pop {
+  position: absolute;
+  right: clamp(10px, 5vw, 40px);
+  bottom: 88px;
+  width: 220px;
+  padding: 20px;
+  border-radius: 24px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(15, 23, 42, 0.82);
+  box-shadow: var(--shagos-window-shadow);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  transform: translateY(12px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.shagos-volume-pop[aria-hidden='false'] {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.shagos-volume-pop label {
+  display: block;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+/* Utility */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--shagos-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .shagos-window-layer {
+    padding: 20px;
+  }
+
+  .shagos-taskbar {
+    margin: auto 16px 18px;
+    padding: 10px 14px;
+  }
+
+  .shagos-taskbar__left,
+  .shagos-taskbar__right {
+    gap: 8px;
+  }
+
+  .shagos-icon-button {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+
+  .shagos-window {
+    min-width: 280px;
+  }
+}
+
+@media (max-width: 620px) {
+  .shagos-launcher {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+
+  .shagpad__editor {
+    min-height: 200px;
+  }
+}
+
+@supports not ((backdrop-filter: blur(10px)) or (-webkit-backdrop-filter: blur(10px))) {
+  .shagos-window,
+  .shagos-taskbar,
+  .shagos-launcher,
+  .shagos-splash__glass,
+  .shagos-volume-pop {
+    background: rgba(15, 23, 42, 0.92);
+  }
+}
