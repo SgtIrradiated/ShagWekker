@@ -178,6 +178,9 @@ const ShagOS = (() => {
 
       const controls = document.createElement('div');
       controls.className = 'shagos-window__controls';
+      controls.addEventListener('pointerdown', (event) => {
+        event.stopPropagation();
+      });
 
       const minimizeButton = document.createElement('button');
       minimizeButton.type = 'button';
@@ -225,11 +228,17 @@ const ShagOS = (() => {
       positionWindow(windowEl);
       focusWindow(id);
 
+      minimizeButton.addEventListener('pointerdown', (event) => {
+        event.stopPropagation();
+      });
       minimizeButton.addEventListener('click', () => {
         playClick();
         minimizeWindow(id);
       });
 
+      closeButton.addEventListener('pointerdown', (event) => {
+        event.stopPropagation();
+      });
       closeButton.addEventListener('click', () => {
         playClick();
         closeWindow(id);
@@ -265,6 +274,12 @@ const ShagOS = (() => {
 
       const onPointerDown = (event) => {
         if (event.button !== 0) return;
+        const interactiveTarget = event.target.closest(
+          '.shagos-window__controls, button, a, input, select, textarea, [contenteditable="true"]'
+        );
+        if (interactiveTarget) {
+          return;
+        }
         dragging = true;
         startX = event.clientX;
         startY = event.clientY;
@@ -465,9 +480,24 @@ const ShagOS = (() => {
     popover.className = 'shagos-volume-pop';
     popover.setAttribute('aria-hidden', 'true');
 
+    const header = document.createElement('div');
+    header.className = 'shagos-volume-pop__header';
+
     const label = document.createElement('label');
     label.setAttribute('for', 'volumeSlider');
     label.textContent = 'Master volume';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'shagos-volume-pop__close';
+    closeBtn.setAttribute('aria-label', 'Close volume popover');
+    closeBtn.innerHTML = '✕';
+    closeBtn.addEventListener('click', () => {
+      playClick();
+      closeVolumePopover();
+    });
+
+    header.append(label, closeBtn);
 
     const slider = document.createElement('input');
     slider.id = 'volumeSlider';
@@ -484,7 +514,7 @@ const ShagOS = (() => {
       persistSettings();
     });
 
-    popover.append(label, slider);
+    popover.append(header, slider);
     document.body.appendChild(popover);
     return popover;
   }
@@ -846,12 +876,6 @@ const ShagOS = (() => {
     volumeTrayButton.addEventListener('click', () => {
       playClick();
       toggleVolumePopover();
-    });
-
-    document.addEventListener('click', (event) => {
-      if (!volumePopover.contains(event.target) && !volumeTrayButton.contains(event.target)) {
-        closeVolumePopover();
-      }
     });
   }
 
