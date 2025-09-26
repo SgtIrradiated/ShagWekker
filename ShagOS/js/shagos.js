@@ -119,6 +119,10 @@ const ShagOS = (() => {
     const clamped = Math.min(1, Math.max(0, volume));
     bootChime.volume = clamped;
     uiClick.volume = clamped;
+    const volumeSlider = volumePopover.querySelector('input[type="range"]');
+    if (volumeSlider && Number(volumeSlider.value) !== clamped) {
+      volumeSlider.value = String(clamped);
+    }
   }
 
   function playClick() {
@@ -170,11 +174,15 @@ const ShagOS = (() => {
 
       const titlebar = document.createElement('header');
       titlebar.className = 'shagos-window__titlebar';
-      titlebar.tabIndex = 0;
+
+      const dragRegion = document.createElement('div');
+      dragRegion.className = 'shagos-window__drag-region';
+      dragRegion.tabIndex = 0;
 
       const title = document.createElement('span');
       title.className = 'shagos-window__title';
       title.textContent = app.title;
+      dragRegion.appendChild(title);
 
       const controls = document.createElement('div');
       controls.className = 'shagos-window__controls';
@@ -199,7 +207,7 @@ const ShagOS = (() => {
       const body = document.createElement('div');
       body.className = 'shagos-window__body';
 
-      titlebar.append(title, controls);
+      titlebar.append(dragRegion, controls);
       windowEl.append(titlebar, body);
 
       if (app.resizable) {
@@ -248,7 +256,7 @@ const ShagOS = (() => {
         focusWindow(id);
       });
 
-      setupDrag(windowEl, titlebar);
+      setupDrag(windowEl, dragRegion);
 
       return instance;
     }
@@ -514,21 +522,36 @@ const ShagOS = (() => {
       persistSettings();
     });
 
+    slider.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        closeVolumePopover();
+      }
+    });
+
     popover.append(header, slider);
     document.body.appendChild(popover);
     return popover;
   }
 
-  function toggleVolumePopover() {
-    const isHidden = volumePopover.getAttribute('aria-hidden') !== 'false';
-    volumePopover.setAttribute('aria-hidden', isHidden ? 'false' : 'true');
-    volumeTrayButton.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-    volumePopover.querySelector('input').value = state.settings.volume;
+  function openVolumePopover() {
+    volumePopover.setAttribute('aria-hidden', 'false');
+    volumeTrayButton.setAttribute('aria-expanded', 'true');
+    const slider = volumePopover.querySelector('input[type="range"]');
+    if (slider) {
+      slider.value = state.settings.volume;
+      slider.focus();
+    }
   }
 
-  function closeVolumePopover() {
+  function closeVolumePopover(options = {}) {
+    const { returnFocus = true } = options;
+    const wasOpen = volumePopover.getAttribute('aria-hidden') === 'false';
     volumePopover.setAttribute('aria-hidden', 'true');
     volumeTrayButton.setAttribute('aria-expanded', 'false');
+    if (returnFocus && wasOpen) {
+      volumeTrayButton.focus();
+    }
   }
 
   function openApp(appId, payload) {
@@ -661,7 +684,7 @@ const ShagOS = (() => {
         });
 
         instance.onClose = () => {
-          closeVolumePopover();
+          closeVolumePopover({ returnFocus: false });
         };
       },
     },
@@ -875,7 +898,7 @@ const ShagOS = (() => {
   function initVolumeTray() {
     volumeTrayButton.addEventListener('click', () => {
       playClick();
-      toggleVolumePopover();
+      openVolumePopover();
     });
   }
 
