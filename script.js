@@ -989,21 +989,47 @@ function renderTimeline(listEl, events, compact, now = new Date(), soonest = nul
   }
 
   listEl.dataset.state = "populated";
+
   const existingItems = new Map(
     Array.from(listEl.children)
       .filter(item => item.dataset?.id)
       .map(item => [item.dataset.id, item])
   );
-  const fragment = document.createDocumentFragment();
+  Array.from(listEl.querySelectorAll(".timeline__item--empty")).forEach(node => node.remove());
+  const seenIds = new Set();
 
-  entries.forEach(entry => {
+  entries.forEach((entry, index) => {
     const accent = resolveHexColor(entry.event.color, fallbackAccent);
     const item = existingItems.get(entry.event.id) || createTimelineItem();
-    updateTimelineItem(item, entry, compact, soonest && soonest.event.id === entry.event.id, accent, fallbackAccent);
-    fragment.appendChild(item);
+
+    if (!item.isConnected) {
+      listEl.appendChild(item);
+    }
+
+    updateTimelineItem(
+      item,
+      entry,
+      compact,
+      soonest && soonest.event.id === entry.event.id,
+      accent,
+      fallbackAccent
+    );
+
+    const currentPosition = listEl.children[index];
+    if (currentPosition !== item) {
+      listEl.insertBefore(item, currentPosition ?? null);
+    }
+
+    seenIds.add(entry.event.id);
   });
 
-  listEl.replaceChildren(fragment);
+  Array.from(listEl.children).forEach(child => {
+    const id = child.dataset?.id;
+    if (!id || seenIds.has(id)) {
+      return;
+    }
+    child.remove();
+  });
 }
 
 function updateSummaries(now, events, soonest) {
