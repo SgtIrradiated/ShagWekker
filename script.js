@@ -1462,6 +1462,118 @@ function initBomboClockEasterEgg() {
   });
 }
 
+function initMenuDrawer() {
+  const menu = document.querySelector("[data-menu]");
+  const menuToggles = document.querySelectorAll("[data-menu-toggle]");
+
+  if (!menu || menuToggles.length === 0) {
+    return;
+  }
+
+  const menuPanel = menu.querySelector(".menu-drawer__panel");
+  const menuDismissTriggers = menu.querySelectorAll("[data-menu-dismiss]");
+  const menuLinks = menu.querySelectorAll(".menu-drawer__nav a");
+  let lastFocusedElement = null;
+  let restoreFocusAfterClose = false;
+
+  const updateToggleState = isOpen => {
+    menuToggles.forEach(toggle => {
+      toggle.setAttribute("aria-expanded", String(isOpen));
+      toggle.classList.toggle("menu-toggle--active", isOpen);
+    });
+  };
+
+  const focusFirstInteractive = () => {
+    if (!(menuPanel instanceof HTMLElement)) {
+      return;
+    }
+    const focusTarget =
+      menuPanel.querySelector(".menu-drawer__close") ||
+      menuPanel.querySelector(
+        'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+    if (focusTarget && typeof focusTarget.focus === "function") {
+      focusTarget.focus({ preventScroll: true });
+    }
+  };
+
+  const restoreLastFocus = () => {
+    if (!restoreFocusAfterClose) {
+      return;
+    }
+    restoreFocusAfterClose = false;
+    if (lastFocusedElement && typeof lastFocusedElement.focus === "function") {
+      lastFocusedElement.focus({ preventScroll: true });
+    }
+  };
+
+  const handleKeydown = event => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeMenu();
+    }
+  };
+
+  const openMenu = origin => {
+    lastFocusedElement = origin || document.activeElement;
+    restoreFocusAfterClose = false;
+    menu.removeAttribute("hidden");
+    requestAnimationFrame(() => {
+      menu.classList.add("is-open");
+    });
+    document.body.classList.add("menu-open");
+    updateToggleState(true);
+    window.setTimeout(focusFirstInteractive, 120);
+    document.addEventListener("keydown", handleKeydown);
+  };
+
+  const closeMenu = () => {
+    if (!menu.classList.contains("is-open")) {
+      return;
+    }
+    restoreFocusAfterClose = true;
+    menu.classList.remove("is-open");
+    document.body.classList.remove("menu-open");
+    updateToggleState(false);
+    document.removeEventListener("keydown", handleKeydown);
+
+    if (!(menuPanel instanceof HTMLElement)) {
+      menu.setAttribute("hidden", "");
+      restoreLastFocus();
+    }
+  };
+
+  menu.addEventListener("transitionend", event => {
+    if (!menu.classList.contains("is-open") && event.target === menuPanel) {
+      menu.setAttribute("hidden", "");
+      restoreLastFocus();
+    }
+  });
+
+  menuToggles.forEach(toggle => {
+    toggle.addEventListener("click", () => {
+      if (menu.classList.contains("is-open")) {
+        closeMenu();
+      } else {
+        openMenu(toggle);
+      }
+    });
+  });
+
+  menuDismissTriggers.forEach(trigger => {
+    trigger.addEventListener("click", event => {
+      event.preventDefault();
+      closeMenu();
+    });
+  });
+
+  menuLinks.forEach(link => {
+    link.addEventListener("click", () => {
+      closeMenu();
+    });
+  });
+}
+
 function setEditingState(event) {
   const editingId = document.getElementById("editingId");
   const labelInput = document.getElementById("labelInput");
@@ -1537,6 +1649,7 @@ function setEditingState(event) {
 
   initAudioPlayer();
   initShagMeter();
+  initMenuDrawer();
 
   const customBoard = document.getElementById("customBoard");
   const timelineList = document.getElementById("timelineList");
