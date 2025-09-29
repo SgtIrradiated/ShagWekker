@@ -51,9 +51,8 @@ const AUDIO_PROGRESS_STEPS = 1000;
 const STATIC_AUDIO_REFERENCES = [
   { src: `${AUDIO_DIRECTORY}Shag Track.flac`, title: "De Shag Trek", artist: "Shag Archives" },
   { src: `${AUDIO_DIRECTORY}audio.mp3`, title: "Blije Man", artist: "Shag Collective" },
-  { src: `${AUDIO_DIRECTORY}30 Days In The Hole.flac`, title: "30 Days In The Hole", artist: "Classic Nicotine" },
-  { src: `${AUDIO_DIRECTORY}Hank.mp3`, title: "Are You Sure Hank Done It This Way", artist: "Shag Archives" },
   { src: `${AUDIO_DIRECTORY}nicotinerzshy.mp3`, title: "Donaldy Trumpowich", artist: "Kremlin Cut" },
+  { src: `${AUDIO_DIRECTORY}bankametaal.mp3`, title: "Banka Wird Zur Snackbar", artist: "Harammstein" },
   { src: `${AUDIO_DIRECTORY}blyat.mp3`, title: "Blyat", artist: "Ruski Rolls" }
 ];
 
