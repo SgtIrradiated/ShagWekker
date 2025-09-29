@@ -19,7 +19,7 @@
           <span class="brand__tag">Je kan nooit genoeg Shag roken.</span>
         </div>
       </div>
-      <nav class="site-nav" aria-label="Primary">
+      <nav class="site-nav" aria-label="In-page">
         <a href="index.html#hero">Shag</a>
         <a href="index.html#planner">Nicotineteller</a>
         <a href="index.html#customize">Inlassen</a>
@@ -30,8 +30,37 @@
       </nav>
       <div class="header-actions">
         <button class="btn ghost" id="contrastToggle" type="button" aria-pressed="false">High contrast</button>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="globalMenu" data-menu-toggle>
+          <span class="menu-toggle__icon" aria-hidden="true">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+          <span class="menu-toggle__label">Menu</span>
+        </button>
       </div>
     </header>
+    <div class="menu-drawer" id="globalMenu" data-menu hidden>
+      <div class="menu-drawer__backdrop" data-menu-dismiss></div>
+      <aside class="menu-drawer__panel" role="dialog" aria-modal="true" aria-labelledby="globalMenuTitle">
+        <header class="menu-drawer__header">
+          <p class="menu-drawer__eyebrow">Verken</p>
+          <h2 class="menu-drawer__title" id="globalMenuTitle">ShagWekker universe</h2>
+          <button class="menu-drawer__close" type="button" aria-label="Sluit menu" data-menu-dismiss>
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </header>
+        <nav class="menu-drawer__nav" aria-label="Pagina's">
+          <a href="index.html">Home</a>
+          <a href="shagmeter.html" aria-current="page">ShagMeter</a>
+          <a href="gallery.html">Gallery</a>
+          <a href="library.html">ShagFiles</a>
+        </nav>
+        <div class="menu-drawer__footer">
+          <p>Blijf roken, blijf plannen. 💨</p>
+        </div>
+      </aside>
+    </div>
 
     <main>
       <section class="hero meter-hero" id="hero">
