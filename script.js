@@ -658,6 +658,134 @@ function initAudioPlayer() {
     resetProgress();
     setStatus("Kan de geselecteerde track niet afspelen.");
   });
+
+  const prevButton = playerEl.querySelector("[data-audio-prev]");
+  const nextButton = playerEl.querySelector("[data-audio-next]");
+  const shuffleButton = playerEl.querySelector("[data-audio-shuffle]");
+  let shuffle = readStoredPreference("shagwekker.audio.shuffle.v1") === "true";
+
+  const syncShuffle = () => {
+    if (shuffleButton) {
+      shuffleButton.setAttribute("aria-pressed", String(shuffle));
+      shuffleButton.classList.toggle("is-active", shuffle);
+    }
+  };
+  syncShuffle();
+
+  const cycleTrack = delta => {
+    if (!tracks.length) {
+      return;
+    }
+    let nextIndex;
+    if (shuffle && tracks.length > 1) {
+      do {
+        nextIndex = Math.floor(Math.random() * tracks.length);
+      } while (nextIndex === activeTrackIndex);
+    } else {
+      const base = activeTrackIndex === -1 ? 0 : activeTrackIndex;
+      nextIndex = (base + delta + tracks.length) % tracks.length;
+    }
+    selectTrack(nextIndex);
+    selectEl.value = String(nextIndex);
+    audio.play().catch(() => {});
+  };
+
+  if (prevButton) {
+    prevButton.addEventListener("click", () => cycleTrack(-1));
+  }
+  if (nextButton) {
+    nextButton.addEventListener("click", () => cycleTrack(1));
+  }
+  if (shuffleButton) {
+    shuffleButton.addEventListener("click", () => {
+      shuffle = !shuffle;
+      writeStoredPreference("shagwekker.audio.shuffle.v1", shuffle ? "true" : "false");
+      syncShuffle();
+    });
+  }
+
+  audio.addEventListener("ended", () => {
+    if (!tracks.length) {
+      return;
+    }
+    if (shuffle || activeTrackIndex < tracks.length - 1) {
+      cycleTrack(1);
+    }
+  });
+
+  playerEl.addEventListener("keydown", event => {
+    if (event.target.matches("input, select, textarea")) {
+      return;
+    }
+    switch (event.key) {
+      case " ":
+        event.preventDefault();
+        playButton.click();
+        break;
+      case "ArrowRight":
+        if (Number.isFinite(audio.duration)) {
+          audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
+        }
+        break;
+      case "ArrowLeft":
+        if (Number.isFinite(audio.duration)) {
+          audio.currentTime = Math.max(0, audio.currentTime - 5);
+        }
+        break;
+      case "n":
+      case "N":
+        cycleTrack(1);
+        break;
+      case "p":
+      case "P":
+        cycleTrack(-1);
+        break;
+      case "m":
+      case "M":
+        audio.muted = !audio.muted;
+        break;
+      case "s":
+      case "S":
+        if (shuffleButton) {
+          shuffleButton.click();
+        }
+        break;
+      default:
+        break;
+    }
+  });
+
+  if (!playerEl.hasAttribute("tabindex")) {
+    playerEl.setAttribute("tabindex", "0");
+  }
+}
+
+function initSoundboard() {
+  const grid = document.getElementById("soundboardGrid");
+  if (!grid) {
+    return;
+  }
+  grid.addEventListener("click", event => {
+    const pad = event.target.closest(".soundboard__pad");
+    if (!pad) {
+      return;
+    }
+    const src = pad.dataset.audioSrc;
+    if (!src) {
+      return;
+    }
+    try {
+      const clip = new Audio(resolveAudioUrl(src));
+      clip.volume = 0.85;
+      clip.play().catch(() => {});
+      pad.classList.add("soundboard__pad--active");
+      const clear = () => pad.classList.remove("soundboard__pad--active");
+      clip.addEventListener("ended", clear, { once: true });
+      setTimeout(clear, 6000);
+    } catch (error) {
+      console.warn("Soundboard clip kon niet spelen", error);
+    }
+  });
 }
 
 function loadCustomEvents() {
@@ -1162,7 +1290,6 @@ function initShagMeter() {
   const explosionEl = section.querySelector("[data-shagmeter-explosion]");
 
   if (
-    !timelineList ||
     !meterEl ||
     !statusEl ||
     !goalInput ||
@@ -1179,6 +1306,9 @@ function initShagMeter() {
   let timelineItem = null;
 
   const renderTimelineCard = () => {
+    if (!timelineList) {
+      return;
+    }
     const now = new Date();
     const customEvents = loadCustomEvents();
     const events = getAllEvents(customEvents);
@@ -1521,6 +1651,55 @@ function initBomboClockEasterEgg() {
       brand.classList.remove(animationClass);
     }
   });
+
+  // Session-only discoverability hint: after ~120s of inactivity, nudge the logo.
+  let idleTimer = null;
+  let hintShown = false;
+  const prefersReducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const showHint = () => {
+    if (hintShown || activationCount > 0) {
+      return;
+    }
+    hintShown = true;
+    brand.classList.add("brand--hint");
+    brand.setAttribute("title", "Probeer eens te klikken...");
+    if (!brand.querySelector(".brand__hint-dot")) {
+      const dot = document.createElement("span");
+      dot.className = "brand__hint-dot";
+      dot.setAttribute("aria-hidden", "true");
+      brand.appendChild(dot);
+    }
+  };
+
+  const clearHint = () => {
+    brand.classList.remove("brand--hint");
+    const dot = brand.querySelector(".brand__hint-dot");
+    if (dot) {
+      dot.remove();
+    }
+  };
+
+  const resetIdle = () => {
+    if (prefersReducedMotion || activationCount > 0) {
+      return;
+    }
+    hintShown = false;
+    clearHint();
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+    }
+    idleTimer = setTimeout(showHint, 120000);
+  };
+
+  ["mousemove", "keydown", "scroll", "touchstart"].forEach(type => {
+    window.addEventListener(type, resetIdle, { passive: true });
+  });
+  brand.addEventListener("click", clearHint);
+  resetIdle();
 }
 
 function setEditingState(event) {
@@ -1971,6 +2150,7 @@ function updateTabBadge(soonest) {
   initBomboClockEasterEgg();
 
   initAudioPlayer();
+  initSoundboard();
   initShagMeter();
 
   const customBoard = document.getElementById("customBoard");

@@ -126,6 +126,58 @@
         </article>
       </section>
 
+      <details class="shagmeter-embed" open data-shagmeter>
+        <summary class="shagmeter-embed__summary">
+          <span>ShagMeter — dagelijks doel</span>
+          <a class="shagmeter-embed__link" href="shagmeter.html">Volledige pagina →</a>
+        </summary>
+        <article class="meter-card shagmeter-card">
+          <div class="shagmeter__goal">
+            <label for="shagmeterGoal">Dagelijkse shag goal</label>
+            <div class="shagmeter__goal-control">
+              <input
+                id="shagmeterGoal"
+                type="range"
+                min="1"
+                max="20"
+                step="1"
+                value="8"
+                data-shagmeter-goal
+                aria-label="Dagelijkse shag goal"
+              />
+              <span class="shagmeter__goal-value" data-shagmeter-goal-value>8 Shaggies</span>
+            </div>
+          </div>
+
+          <div class="shagmeter__display">
+            <div
+              class="shagmeter__core"
+              role="meter"
+              aria-valuemin="0"
+              aria-valuemax="8"
+              aria-valuenow="0"
+              aria-label="ShagMeter voortgang"
+              data-shagmeter-meter
+            >
+              <div class="shagmeter__pulse" aria-hidden="true"></div>
+              <div class="shagmeter__value">
+                <span class="shagmeter__count" data-shagmeter-count>0</span>
+                <span class="shagmeter__count-label" data-shagmeter-count-label>Shaggies</span>
+              </div>
+            </div>
+            <div class="shagmeter__eruption" data-shagmeter-explosion aria-hidden="true"></div>
+          </div>
+
+          <p class="shagmeter__status" data-shagmeter-status>0 van 8 Shaggies genoteerd.</p>
+
+          <div class="shagmeter__actions">
+            <button class="shagmeter__add-btn" type="button" data-shagmeter-add aria-label="Voeg een shaggie toe">+</button>
+            <span class="shagmeter__actions-label">Shaggie</span>
+            <button class="btn ghost shagmeter__reset" type="button" data-shagmeter-reset>Reset</button>
+          </div>
+        </article>
+      </details>
+
       <section class="planner" id="planner">
         <div class="planner__sidebar planner__sidebar--main" aria-label="Upcoming timeline">
           <header class="section-header">
@@ -338,6 +390,12 @@
                   <span style="--wave-index: 23"></span>
                 </div>
                 <div class="audio-player__controls">
+                  <button class="audio-player__control" type="button" data-audio-prev aria-label="Vorige track">
+                    <svg class="audio-player__icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <polygon points="17,5 17,19 8,12" />
+                      <rect x="5" y="5" width="2.5" height="14" rx="1" />
+                    </svg>
+                  </button>
                   <button class="audio-player__control" type="button" data-audio-play aria-label="Play">
                     <svg class="audio-player__icon audio-player__icon--play" viewBox="0 0 24 24" aria-hidden="true">
                       <polygon points="8,5 8,19 19,12" />
@@ -350,6 +408,21 @@
                   <button class="audio-player__control" type="button" data-audio-stop aria-label="Stop">
                     <svg class="audio-player__icon" viewBox="0 0 24 24" aria-hidden="true">
                       <rect x="6" y="6" width="12" height="12" rx="1.5" />
+                    </svg>
+                  </button>
+                  <button class="audio-player__control" type="button" data-audio-next aria-label="Volgende track">
+                    <svg class="audio-player__icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <polygon points="7,5 7,19 16,12" />
+                      <rect x="16.5" y="5" width="2.5" height="14" rx="1" />
+                    </svg>
+                  </button>
+                  <button class="audio-player__control audio-player__control--toggle" type="button" data-audio-shuffle aria-pressed="false" aria-label="Shuffle">
+                    <svg class="audio-player__icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M4 7h3.5l9 10H20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M4 17h3.5l3-3.3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M13.5 9.3l3-2.3H20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      <polyline points="17.5,4 20,7 17.5,10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      <polyline points="17.5,14 20,17 17.5,20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                   </button>
                   <a
@@ -413,6 +486,49 @@
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section class="soundboard-section" id="soundboard">
+        <header class="section-header">
+          <div>
+            <p class="section-header__eyebrow">Snelle shag-sfx</p>
+            <h2>Soundboard.</h2>
+          </div>
+          <p class="section-header__hint">Druk op een pad voor een korte clip — onafhankelijk van de speler hierboven.</p>
+        </header>
+        <div class="soundboard" id="soundboardGrid">
+          <button class="soundboard__pad" type="button" data-audio-src="audio/blyat.mp3">Blyat</button>
+          <button class="soundboard__pad" type="button" data-audio-src="audio/bankametaal.mp3">Banka</button>
+          <button class="soundboard__pad" type="button" data-audio-src="audio/nicotinerzshy.mp3">Trump</button>
+          <button class="soundboard__pad" type="button" data-audio-src="audio/audio.mp3">Blije Man</button>
+        </div>
+      </section>
+
+      <section class="gallery-preview" id="gallery-preview">
+        <header class="section-header">
+          <div>
+            <p class="section-header__eyebrow">Oogsnoep</p>
+            <h2>Uit de gallery.</h2>
+          </div>
+          <a class="btn ghost" href="gallery.html">Meer in de gallery &rarr;</a>
+        </header>
+        <div class="gallery-preview__strip">
+          <figure class="gallery-preview__figure">
+            <img src="gallery/dikkedeal.png" alt="Dikke deal" loading="lazy" decoding="async" />
+          </figure>
+          <figure class="gallery-preview__figure">
+            <img src="gallery/groep.png" alt="De groep" loading="lazy" decoding="async" />
+          </figure>
+          <figure class="gallery-preview__figure">
+            <img src="gallery/jottrump.png" alt="Jottrump" loading="lazy" decoding="async" />
+          </figure>
+          <figure class="gallery-preview__figure">
+            <img src="gallery/kebab.png" alt="Kebab" loading="lazy" decoding="async" />
+          </figure>
+          <figure class="gallery-preview__figure">
+            <img src="gallery/peerson.png" alt="Peerson" loading="lazy" decoding="async" />
+          </figure>
         </div>
       </section>
     </main>
