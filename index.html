@@ -69,6 +69,7 @@
           <li><a href="shagmeter.html">ShagMeter</a></li>
           <li><a href="gallery.html">Gallery</a></li>
           <li><a href="library.html">ShagFiles</a></li>
+          <li class="site-nav__action"><button class="btn ghost" id="notifyToggle" type="button" aria-pressed="false">Notificaties aan</button></li>
           <li class="site-nav__action"><button class="btn ghost" id="contrastToggle" type="button" aria-pressed="false">High contrast</button></li>
         </ul>
       </nav>
@@ -121,6 +122,7 @@
             <code id="accentValue" class="status-card__swatch-value">#ff0000</code>
             <button type="button" id="accentReset" class="btn ghost btn--mini">Reset</button>
           </div>
+          <button type="button" id="chimeToggle" class="btn ghost btn--mini" aria-pressed="true">Geluid: aan</button>
         </article>
       </section>
 
@@ -173,6 +175,7 @@
                   <option value="Daily">Dagelijks</option>
                   <option value="Weekdays">Doordeweeks</option>
                   <option value="Weekends">Weekenden</option>
+                  <option value="SpecificWeekdays">Specifieke dagen</option>
                 </select>
               </div>
               <div class="form-field">
@@ -180,6 +183,18 @@
                 <input id="colorInput" name="color" type="color" value="#ff0000" />
               </div>
             </div>
+            <fieldset class="form-field weekday-picker" id="weekdayPicker" hidden>
+              <legend>Kies dagen</legend>
+              <div class="weekday-picker__options">
+                <label class="weekday-picker__option"><input type="checkbox" name="weekday" value="1" /> Ma</label>
+                <label class="weekday-picker__option"><input type="checkbox" name="weekday" value="2" /> Di</label>
+                <label class="weekday-picker__option"><input type="checkbox" name="weekday" value="3" /> Wo</label>
+                <label class="weekday-picker__option"><input type="checkbox" name="weekday" value="4" /> Do</label>
+                <label class="weekday-picker__option"><input type="checkbox" name="weekday" value="5" /> Vr</label>
+                <label class="weekday-picker__option"><input type="checkbox" name="weekday" value="6" /> Za</label>
+                <label class="weekday-picker__option"><input type="checkbox" name="weekday" value="0" /> Zo</label>
+              </div>
+            </fieldset>
             <div class="form-field">
               <label for="notesInput">Notitties</label>
               <textarea id="notesInput" name="notes" rows="3" placeholder="Add an optional intention or checklist." maxlength="120"></textarea>
@@ -409,6 +424,8 @@
   </div>
 
   <div id="toastStack" class="toast-stack" role="region" aria-label="Meldingen" aria-live="polite"></div>
+
+  <audio id="chimeAudio" preload="auto" src="audio/nicotinerzshy.mp3"></audio>
 
   <script src="script.js"></script>
 </body>

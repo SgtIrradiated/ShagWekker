@@ -692,17 +692,36 @@ function loadCustomEvents() {
   return [];
 }
 
+function normalizeWeekdays(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const cleaned = value
+    .map(Number)
+    .filter(day => Number.isInteger(day) && day >= 0 && day <= 6);
+  return Array.from(new Set(cleaned)).sort((a, b) => a - b);
+}
+
 function normalizeCustomEvents(events) {
   return events
     .filter(evt => typeof evt === "object" && evt !== null)
-    .map(evt => ({
-      id: evt.id || uniqueId(),
-      time: typeof evt.time === "string" ? evt.time : "12:00",
-      label: typeof evt.label === "string" && evt.label.trim() ? evt.label.trim() : "Untitled cue",
-      recurrence: ["Daily", "Weekdays", "Weekends"].includes(evt.recurrence) ? evt.recurrence : "Daily",
-      color: resolveHexColor(evt.color),
-      notes: typeof evt.notes === "string" ? evt.notes.trim() : ""
-    }))
+    .map(evt => {
+      const recurrence = ["Daily", "Weekdays", "Weekends", "SpecificWeekdays"].includes(evt.recurrence)
+        ? evt.recurrence
+        : "Daily";
+      const normalized = {
+        id: evt.id || uniqueId(),
+        time: typeof evt.time === "string" ? evt.time : "12:00",
+        label: typeof evt.label === "string" && evt.label.trim() ? evt.label.trim() : "Untitled cue",
+        recurrence,
+        color: resolveHexColor(evt.color),
+        notes: typeof evt.notes === "string" ? evt.notes.trim() : ""
+      };
+      if (recurrence === "SpecificWeekdays") {
+        normalized.weekdays = normalizeWeekdays(evt.weekdays);
+      }
+      return normalized;
+    })
     .sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
 }
 
@@ -752,6 +771,13 @@ function nextOccurrenceFor(event, now) {
   switch (event.recurrence) {
     case "MonWedThu":
       return nextSpecificWeekdaysOccurrence(now, event.time, [1, 3, 4]);
+    case "SpecificWeekdays": {
+      const days = Array.isArray(event.weekdays) ? event.weekdays : [];
+      if (!days.length) {
+        return null;
+      }
+      return nextSpecificWeekdaysOccurrence(now, event.time, days);
+    }
     case "Weekdays":
       return nextWeekdayOccurrence(now, event.time);
     case "Weekends":
@@ -789,10 +815,16 @@ function getAllEvents(customEvents) {
   return [...DEFAULT_EVENTS, ...customEvents];
 }
 
-function recurrenceTag(recurrence) {
+const WEEKDAY_SHORT = ["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"];
+
+function recurrenceTag(recurrence, weekdays) {
   switch (recurrence) {
     case "MonWedThu":
       return "Mon/Wed/Thu";
+    case "SpecificWeekdays":
+      return Array.isArray(weekdays) && weekdays.length
+        ? weekdays.map(day => WEEKDAY_SHORT[day]).join(" · ")
+        : "Geen dagen";
     case "Weekdays":
       return "Weekdays";
     case "Weekends":
@@ -822,7 +854,7 @@ function buildEventCard(event, source = "core") {
     <div class="event-card__top">
       <div>
         <p class="event-card__label">${event.label}</p>
-        <p class="event-card__meta"><span class="event-time">${event.time}</span> · ${recurrenceTag(event.recurrence)}</p>
+        <p class="event-card__meta"><span class="event-time">${event.time}</span> · ${recurrenceTag(event.recurrence, event.weekdays)}</p>
       </div>
       <span class="pill">${pillLabel}</span>
     </div>
@@ -935,7 +967,7 @@ function updateTimelineItem(item, entry, compact, isNext, accent, fallbackAccent
   }
 
   if (pillEl) {
-    pillEl.textContent = recurrenceTag(entry.event.recurrence);
+    pillEl.textContent = recurrenceTag(entry.event.recurrence, entry.event.weekdays);
   }
 
   const dayWindow = 24 * 60 * 60 * 1000;
@@ -1083,6 +1115,9 @@ function updateCountdowns(events, compact, { timelineList } = {}) {
 
   events.forEach(event => {
     const next = nextOccurrenceFor(event, now);
+    if (!next) {
+      return;
+    }
     const remain = next - now;
     if (!soonest || remain < soonest.remain) {
       soonest = { event, remain, next };
@@ -1098,6 +1133,8 @@ function updateCountdowns(events, compact, { timelineList } = {}) {
     }
   });
 
+  checkAlarms(events, now);
+  updateTabBadge(soonest);
   highlightSoonestCard(soonest);
   if (timelineList) {
     renderTimeline(timelineList, events, compact, now, soonest);
@@ -1149,6 +1186,9 @@ function initShagMeter() {
     let soonest = null;
     events.forEach(event => {
       const next = nextOccurrenceFor(event, now);
+      if (!next) {
+        return;
+      }
       const remain = next - now;
       if (!soonest || remain < soonest.remain) {
         soonest = { event, remain, next };
@@ -1492,6 +1532,17 @@ function setEditingState(event) {
   const notesInput = document.getElementById("notesInput");
   const cancelEdit = document.getElementById("cancelEdit");
   const submitBtn = document.getElementById("submitBtn");
+  const weekdayPicker = document.getElementById("weekdayPicker");
+  const weekdayBoxes = document.querySelectorAll('#weekdayPicker input[name="weekday"]');
+
+  const setWeekdayBoxes = (days = []) => {
+    weekdayBoxes.forEach(box => {
+      box.checked = days.includes(Number(box.value));
+    });
+    if (weekdayPicker) {
+      weekdayPicker.hidden = !days.length && (!recurrenceSelect || recurrenceSelect.value !== "SpecificWeekdays");
+    }
+  };
 
   if (!event) {
     editingId.value = "";
@@ -1500,6 +1551,10 @@ function setEditingState(event) {
     recurrenceSelect.value = "Daily";
     colorInput.value = getCurrentAccentColor();
     notesInput.value = "";
+    setWeekdayBoxes([]);
+    if (weekdayPicker) {
+      weekdayPicker.hidden = true;
+    }
     cancelEdit.hidden = true;
     submitBtn.textContent = "Save cue";
     return;
@@ -1511,6 +1566,10 @@ function setEditingState(event) {
   recurrenceSelect.value = event.recurrence;
   colorInput.value = resolveHexColor(event.color, getCurrentAccentColor());
   notesInput.value = event.notes || "";
+  setWeekdayBoxes(event.recurrence === "SpecificWeekdays" ? event.weekdays || [] : []);
+  if (weekdayPicker) {
+    weekdayPicker.hidden = event.recurrence !== "SpecificWeekdays";
+  }
   cancelEdit.hidden = false;
   submitBtn.textContent = "Update cue";
 }
@@ -1645,6 +1704,218 @@ function parseImportedCues(text) {
   return normalizeCustomEvents(rawEvents);
 }
 
+/* ── Phase B: alarm-clock functionality ── */
+const NOTIFY_KEY = "shagwekker.notifications.enabled.v1";
+const CHIME_KEY = "shagwekker.chime.enabled.v1";
+const ALARM_FIRE_WINDOW_MS = 5000;
+
+let notificationsEnabled = false;
+let chimeEnabled = true;
+let chimeEl = null;
+const alarmNextTimes = new Map();
+let alarmPrimed = false;
+
+function initChime() {
+  chimeEl = document.getElementById("chimeAudio");
+  chimeEnabled = readStoredPreference(CHIME_KEY) !== "false";
+  const chimeToggle = document.getElementById("chimeToggle");
+  if (!chimeToggle) {
+    return;
+  }
+  const sync = () => {
+    chimeToggle.setAttribute("aria-pressed", String(chimeEnabled));
+    chimeToggle.textContent = chimeEnabled ? "Geluid: aan" : "Geluid: uit";
+  };
+  sync();
+  chimeToggle.addEventListener("click", () => {
+    chimeEnabled = !chimeEnabled;
+    writeStoredPreference(CHIME_KEY, chimeEnabled ? "true" : "false");
+    sync();
+  });
+}
+
+function playChime() {
+  if (!chimeEnabled || !chimeEl) {
+    return;
+  }
+  try {
+    const instance = chimeEl.cloneNode(true);
+    instance.volume = 0.7;
+    const played = instance.play();
+    if (played && typeof played.catch === "function") {
+      played.catch(() => {});
+    }
+  } catch (error) {
+    console.warn("Chime kon niet afspelen", error);
+  }
+}
+
+function initNotifications() {
+  const toggle = document.getElementById("notifyToggle");
+  const supported = typeof window !== "undefined" && "Notification" in window;
+  notificationsEnabled =
+    supported && Notification.permission === "granted" && readStoredPreference(NOTIFY_KEY) === "true";
+
+  if (!toggle) {
+    return;
+  }
+  if (!supported) {
+    toggle.disabled = true;
+    toggle.textContent = "Geen notificaties";
+    return;
+  }
+
+  const sync = () => {
+    toggle.setAttribute("aria-pressed", String(notificationsEnabled));
+    toggle.textContent = notificationsEnabled ? "Notificaties uit" : "Notificaties aan";
+  };
+  sync();
+
+  toggle.addEventListener("click", async () => {
+    if (notificationsEnabled) {
+      notificationsEnabled = false;
+      writeStoredPreference(NOTIFY_KEY, "false");
+      sync();
+      return;
+    }
+    let permission = Notification.permission;
+    if (permission !== "granted") {
+      try {
+        permission = await Notification.requestPermission();
+      } catch (error) {
+        console.warn("Notificatiepermissie mislukt", error);
+      }
+    }
+    if (permission === "granted") {
+      notificationsEnabled = true;
+      writeStoredPreference(NOTIFY_KEY, "true");
+      // The click is a user gesture — prime audio so chimes can play later.
+      playChime();
+      showToast("Notificaties staan aan", { tone: "success" });
+    } else {
+      showToast("Notificaties geblokkeerd in je browser", { tone: "warning" });
+    }
+    sync();
+  });
+}
+
+function fireAlarm(event) {
+  playChime();
+  if (notificationsEnabled && "Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification(event.label, {
+        body: "Tijd voor je shagpauze.",
+        icon: "/android-chrome-192x192.png",
+        tag: event.id,
+        renotify: true
+      });
+    } catch (error) {
+      console.warn("Notificatie kon niet getoond worden", error);
+    }
+  }
+  showToast(`${event.label} — nu!`, { tone: "info" });
+}
+
+function checkAlarms(events, now) {
+  const nowMs = now.getTime();
+  events.forEach(event => {
+    const next = nextOccurrenceFor(event, now);
+    if (!next) {
+      alarmNextTimes.delete(event.id);
+      return;
+    }
+    const nextMs = next.getTime();
+    const prev = alarmNextTimes.get(event.id);
+    if (alarmPrimed && prev !== undefined && nextMs > prev && nowMs >= prev && nowMs - prev < ALARM_FIRE_WINDOW_MS) {
+      fireAlarm(event);
+    }
+    alarmNextTimes.set(event.id, nextMs);
+  });
+  alarmPrimed = true;
+}
+
+let tabBadgeActive = false;
+let tabBadgeFlash = false;
+let originalTitle = "";
+let originalFavicon = "";
+let badgeFaviconUrl = "";
+let faviconLink = null;
+
+function buildBadgeFavicon() {
+  const base = document.querySelector('link[rel="icon"][sizes="32x32"]') || document.querySelector('link[rel="icon"]');
+  faviconLink = base;
+  if (base) {
+    originalFavicon = base.href;
+  }
+  if (typeof document.createElement !== "function") {
+    return;
+  }
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 32;
+      canvas.height = 32;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, 32, 32);
+      ctx.beginPath();
+      ctx.arc(24, 8, 7, 0, Math.PI * 2);
+      ctx.fillStyle = "#ff2d2d";
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+      badgeFaviconUrl = canvas.toDataURL("image/png");
+    } catch (error) {
+      badgeFaviconUrl = "";
+    }
+  };
+  if (originalFavicon) {
+    img.src = originalFavicon;
+  }
+}
+
+function initTabBadge() {
+  originalTitle = document.title;
+  buildBadgeFavicon();
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      clearTabBadge();
+    }
+  });
+}
+
+function setFavicon(url) {
+  if (faviconLink && url) {
+    faviconLink.href = url;
+  }
+}
+
+function clearTabBadge() {
+  if (!tabBadgeActive) {
+    return;
+  }
+  tabBadgeActive = false;
+  tabBadgeFlash = false;
+  document.title = originalTitle;
+  setFavicon(originalFavicon);
+}
+
+function updateTabBadge(soonest) {
+  const imminent = Boolean(soonest) && soonest.remain <= 60000 && soonest.remain >= 0;
+  if (!imminent) {
+    clearTabBadge();
+    return;
+  }
+  tabBadgeActive = true;
+  if (document.hidden === false) {
+    return;
+  }
+  tabBadgeFlash = !tabBadgeFlash;
+  document.title = tabBadgeFlash ? `(!) ${originalTitle}` : originalTitle;
+  setFavicon(tabBadgeFlash && badgeFaviconUrl ? badgeFaviconUrl : originalFavicon);
+}
+
 (function init() {
   const footerYear = document.getElementById("footerYear");
   if (footerYear) {
@@ -1653,6 +1924,9 @@ function parseImportedCues(text) {
 
   initToasts();
   initMobileNav();
+  initChime();
+  initNotifications();
+  initTabBadge();
 
   const contrastToggle = document.getElementById("contrastToggle");
   const updateHighContrast = isActive => {
@@ -1731,6 +2005,28 @@ function parseImportedCues(text) {
   };
 
   renderAll();
+
+  const recurrenceSelect = document.getElementById("recurrenceSelect");
+  const weekdayPicker = document.getElementById("weekdayPicker");
+  const syncWeekdayPicker = () => {
+    if (weekdayPicker && recurrenceSelect) {
+      weekdayPicker.hidden = recurrenceSelect.value !== "SpecificWeekdays";
+    }
+  };
+  if (recurrenceSelect) {
+    recurrenceSelect.addEventListener("change", syncWeekdayPicker);
+    syncWeekdayPicker();
+  }
+
+  window.addEventListener("storage", evt => {
+    if (evt.key === STORAGE_KEY) {
+      customEvents = loadCustomEvents();
+      setEditingState(null);
+      renderAll();
+    } else if (evt.key === PREFERENCE_KEYS.accentColor && evt.newValue) {
+      setAccentColor(evt.newValue);
+    }
+  });
 
   precisionToggle.addEventListener("click", () => {
     compactMode = !compactMode;
@@ -1860,25 +2156,34 @@ function parseImportedCues(text) {
     const recurrence = formData.get("recurrence").toString();
     const color = resolveHexColor(formData.get("color").toString(), getCurrentAccentColor());
     const notes = formData.get("notes").toString().trim();
+    const weekdays = normalizeWeekdays(formData.getAll("weekday").map(Number));
 
     if (!/^\d{2}:\d{2}$/.test(time)) {
       showToast("Geef een geldige tijd op (HH:MM)", { tone: "warning" });
       return;
     }
 
+    if (recurrence === "SpecificWeekdays" && !weekdays.length) {
+      showToast("Kies minstens één dag", { tone: "warning" });
+      return;
+    }
+
+    const fields = { label, time, recurrence, color, notes };
+    if (recurrence === "SpecificWeekdays") {
+      fields.weekdays = weekdays;
+    }
+
     if (id) {
-      customEvents = customEvents.map(evt => (evt.id === id ? { ...evt, label, time, recurrence, color, notes } : evt));
+      customEvents = customEvents.map(evt => (evt.id === id ? { ...evt, weekdays: undefined, ...fields } : evt));
     } else {
-      customEvents = [
-        ...customEvents,
-        { id: uniqueId(), label, time, recurrence, color, notes }
-      ];
+      customEvents = [...customEvents, { id: uniqueId(), ...fields }];
     }
 
     customEvents = normalizeCustomEvents(customEvents);
     saveCustomEvents(customEvents);
     renderAll();
     createEventForm.reset();
+    syncWeekdayPicker();
     setEditingState(null);
     showToast(id ? "Cue bijgewerkt" : "Cue opgeslagen", { tone: "success" });
   });
