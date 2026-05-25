@@ -1,39 +1,55 @@
 <!doctype html>
-<html lang="en">
+<html lang="nl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ShagWekker · ShagMeter</title>
+  <meta name="description" content="De ShagMeter: stel je dagelijkse shagdoel in en houd je voortgang bij." />
+  <meta name="theme-color" content="#0a0a0a" />
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
+  <a class="skip-link" href="#main">Direct naar inhoud</a>
   <div class="page">
     <header class="site-header" id="top">
       <div class="brand" aria-label="ShagWekker">
-        <img src="assets/shag.png" alt="Placeholder logo illustration" class="brand__mark" />
+        <img src="assets/shag.png" alt="ShagWekker logo" class="brand__mark" />
         <div class="brand__text">
           <span class="brand__name">ShagWekker</span>
           <span class="brand__tag">Je kan nooit genoeg Shag roken.</span>
         </div>
       </div>
+      <button
+        class="site-nav__toggle"
+        id="navToggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="primaryNav"
+        aria-label="Menu openen"
+      >
+        <span class="site-nav__toggle-bar" aria-hidden="true"></span>
+        <span class="site-nav__toggle-bar" aria-hidden="true"></span>
+        <span class="site-nav__toggle-bar" aria-hidden="true"></span>
+      </button>
       <nav class="site-nav" aria-label="Primary">
-        <a href="index.html#hero">Shag</a>
-        <a href="index.html#planner">Nicotineteller</a>
-        <a href="index.html#customize">Inlassen</a>
-        <a href="index.html#insights">Insights</a>
-        <a href="shagmeter.html" aria-current="page">ShagMeter</a>
-        <a href="gallery.html">Gallery</a>
-        <a href="library.html">ShagFiles</a>
+        <ul class="site-nav__list" id="primaryNav">
+          <li><a href="index.html#hero">Shag</a></li>
+          <li><a href="index.html#planner">Nicotineteller</a></li>
+          <li><a href="index.html#customize">Inlassen</a></li>
+          <li><a href="index.html#insights">Insights</a></li>
+          <li><a href="shagmeter.html" aria-current="page">ShagMeter</a></li>
+          <li><a href="gallery.html">Gallery</a></li>
+          <li><a href="library.html">ShagFiles</a></li>
+          <li class="site-nav__action"><button class="btn ghost" id="contrastToggle" type="button" aria-pressed="false">High contrast</button></li>
+        </ul>
       </nav>
-      <div class="header-actions">
-        <button class="btn ghost" id="contrastToggle" type="button" aria-pressed="false">High contrast</button>
-      </div>
+      <div class="site-nav__backdrop" id="navBackdrop" hidden></div>
     </header>
 
-    <main>
+    <main id="main">
       <section class="hero meter-hero" id="hero">
         <div class="hero__content">
           <p class="hero__eyebrow">Sla je volgende shag nooit over</p>

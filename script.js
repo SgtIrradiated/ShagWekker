@@ -658,6 +658,134 @@ function initAudioPlayer() {
     resetProgress();
     setStatus("Kan de geselecteerde track niet afspelen.");
   });
+
+  const prevButton = playerEl.querySelector("[data-audio-prev]");
+  const nextButton = playerEl.querySelector("[data-audio-next]");
+  const shuffleButton = playerEl.querySelector("[data-audio-shuffle]");
+  let shuffle = readStoredPreference("shagwekker.audio.shuffle.v1") === "true";
+
+  const syncShuffle = () => {
+    if (shuffleButton) {
+      shuffleButton.setAttribute("aria-pressed", String(shuffle));
+      shuffleButton.classList.toggle("is-active", shuffle);
+    }
+  };
+  syncShuffle();
+
+  const cycleTrack = delta => {
+    if (!tracks.length) {
+      return;
+    }
+    let nextIndex;
+    if (shuffle && tracks.length > 1) {
+      do {
+        nextIndex = Math.floor(Math.random() * tracks.length);
+      } while (nextIndex === activeTrackIndex);
+    } else {
+      const base = activeTrackIndex === -1 ? 0 : activeTrackIndex;
+      nextIndex = (base + delta + tracks.length) % tracks.length;
+    }
+    selectTrack(nextIndex);
+    selectEl.value = String(nextIndex);
+    audio.play().catch(() => {});
+  };
+
+  if (prevButton) {
+    prevButton.addEventListener("click", () => cycleTrack(-1));
+  }
+  if (nextButton) {
+    nextButton.addEventListener("click", () => cycleTrack(1));
+  }
+  if (shuffleButton) {
+    shuffleButton.addEventListener("click", () => {
+      shuffle = !shuffle;
+      writeStoredPreference("shagwekker.audio.shuffle.v1", shuffle ? "true" : "false");
+      syncShuffle();
+    });
+  }
+
+  audio.addEventListener("ended", () => {
+    if (!tracks.length) {
+      return;
+    }
+    if (shuffle || activeTrackIndex < tracks.length - 1) {
+      cycleTrack(1);
+    }
+  });
+
+  playerEl.addEventListener("keydown", event => {
+    if (event.target.matches("input, select, textarea")) {
+      return;
+    }
+    switch (event.key) {
+      case " ":
+        event.preventDefault();
+        playButton.click();
+        break;
+      case "ArrowRight":
+        if (Number.isFinite(audio.duration)) {
+          audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
+        }
+        break;
+      case "ArrowLeft":
+        if (Number.isFinite(audio.duration)) {
+          audio.currentTime = Math.max(0, audio.currentTime - 5);
+        }
+        break;
+      case "n":
+      case "N":
+        cycleTrack(1);
+        break;
+      case "p":
+      case "P":
+        cycleTrack(-1);
+        break;
+      case "m":
+      case "M":
+        audio.muted = !audio.muted;
+        break;
+      case "s":
+      case "S":
+        if (shuffleButton) {
+          shuffleButton.click();
+        }
+        break;
+      default:
+        break;
+    }
+  });
+
+  if (!playerEl.hasAttribute("tabindex")) {
+    playerEl.setAttribute("tabindex", "0");
+  }
+}
+
+function initSoundboard() {
+  const grid = document.getElementById("soundboardGrid");
+  if (!grid) {
+    return;
+  }
+  grid.addEventListener("click", event => {
+    const pad = event.target.closest(".soundboard__pad");
+    if (!pad) {
+      return;
+    }
+    const src = pad.dataset.audioSrc;
+    if (!src) {
+      return;
+    }
+    try {
+      const clip = new Audio(resolveAudioUrl(src));
+      clip.volume = 0.85;
+      clip.play().catch(() => {});
+      pad.classList.add("soundboard__pad--active");
+      const clear = () => pad.classList.remove("soundboard__pad--active");
+      clip.addEventListener("ended", clear, { once: true });
+      setTimeout(clear, 6000);
+    } catch (error) {
+      console.warn("Soundboard clip kon niet spelen", error);
+    }
+  });
 }
 
 function loadCustomEvents() {
@@ -692,17 +820,36 @@ function loadCustomEvents() {
   return [];
 }
 
+function normalizeWeekdays(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const cleaned = value
+    .map(Number)
+    .filter(day => Number.isInteger(day) && day >= 0 && day <= 6);
+  return Array.from(new Set(cleaned)).sort((a, b) => a - b);
+}
+
 function normalizeCustomEvents(events) {
   return events
     .filter(evt => typeof evt === "object" && evt !== null)
-    .map(evt => ({
-      id: evt.id || uniqueId(),
-      time: typeof evt.time === "string" ? evt.time : "12:00",
-      label: typeof evt.label === "string" && evt.label.trim() ? evt.label.trim() : "Untitled cue",
-      recurrence: ["Daily", "Weekdays", "Weekends"].includes(evt.recurrence) ? evt.recurrence : "Daily",
-      color: resolveHexColor(evt.color),
-      notes: typeof evt.notes === "string" ? evt.notes.trim() : ""
-    }))
+    .map(evt => {
+      const recurrence = ["Daily", "Weekdays", "Weekends", "SpecificWeekdays"].includes(evt.recurrence)
+        ? evt.recurrence
+        : "Daily";
+      const normalized = {
+        id: evt.id || uniqueId(),
+        time: typeof evt.time === "string" ? evt.time : "12:00",
+        label: typeof evt.label === "string" && evt.label.trim() ? evt.label.trim() : "Untitled cue",
+        recurrence,
+        color: resolveHexColor(evt.color),
+        notes: typeof evt.notes === "string" ? evt.notes.trim() : ""
+      };
+      if (recurrence === "SpecificWeekdays") {
+        normalized.weekdays = normalizeWeekdays(evt.weekdays);
+      }
+      return normalized;
+    })
     .sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
 }
 
@@ -752,6 +899,13 @@ function nextOccurrenceFor(event, now) {
   switch (event.recurrence) {
     case "MonWedThu":
       return nextSpecificWeekdaysOccurrence(now, event.time, [1, 3, 4]);
+    case "SpecificWeekdays": {
+      const days = Array.isArray(event.weekdays) ? event.weekdays : [];
+      if (!days.length) {
+        return null;
+      }
+      return nextSpecificWeekdaysOccurrence(now, event.time, days);
+    }
     case "Weekdays":
       return nextWeekdayOccurrence(now, event.time);
     case "Weekends":
@@ -789,10 +943,16 @@ function getAllEvents(customEvents) {
   return [...DEFAULT_EVENTS, ...customEvents];
 }
 
-function recurrenceTag(recurrence) {
+const WEEKDAY_SHORT = ["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"];
+
+function recurrenceTag(recurrence, weekdays) {
   switch (recurrence) {
     case "MonWedThu":
       return "Mon/Wed/Thu";
+    case "SpecificWeekdays":
+      return Array.isArray(weekdays) && weekdays.length
+        ? weekdays.map(day => WEEKDAY_SHORT[day]).join(" · ")
+        : "Geen dagen";
     case "Weekdays":
       return "Weekdays";
     case "Weekends":
@@ -822,7 +982,7 @@ function buildEventCard(event, source = "core") {
     <div class="event-card__top">
       <div>
         <p class="event-card__label">${event.label}</p>
-        <p class="event-card__meta"><span class="event-time">${event.time}</span> · ${recurrenceTag(event.recurrence)}</p>
+        <p class="event-card__meta"><span class="event-time">${event.time}</span> · ${recurrenceTag(event.recurrence, event.weekdays)}</p>
       </div>
       <span class="pill">${pillLabel}</span>
     </div>
@@ -850,8 +1010,16 @@ function renderCustomBoard(container, events, emptyStateEl) {
     return;
   }
   emptyStateEl.hidden = true;
+  const isList = container.tagName === "UL" || container.tagName === "OL";
   events.forEach(event => {
-    container.appendChild(buildEventCard(event, "custom"));
+    const card = buildEventCard(event, "custom");
+    if (isList) {
+      const li = document.createElement("li");
+      li.appendChild(card);
+      container.appendChild(li);
+    } else {
+      container.appendChild(card);
+    }
   });
 }
 
@@ -927,7 +1095,7 @@ function updateTimelineItem(item, entry, compact, isNext, accent, fallbackAccent
   }
 
   if (pillEl) {
-    pillEl.textContent = recurrenceTag(entry.event.recurrence);
+    pillEl.textContent = recurrenceTag(entry.event.recurrence, entry.event.weekdays);
   }
 
   const dayWindow = 24 * 60 * 60 * 1000;
@@ -1046,6 +1214,7 @@ function updateSummaries(now, events, soonest) {
 
   if (soonest) {
     nextEventName.textContent = `${soonest.event.label} · ${soonest.event.time}`;
+    announceNextEvent(soonest.event.label);
     nextEventCountdown.textContent = formatCountdown(diffParts(soonest.remain), false);
     const focusDetail = soonest.event.notes || soonest.event.description;
     focusMessage.textContent = focusDetail
@@ -1074,6 +1243,9 @@ function updateCountdowns(events, compact, { timelineList } = {}) {
 
   events.forEach(event => {
     const next = nextOccurrenceFor(event, now);
+    if (!next) {
+      return;
+    }
     const remain = next - now;
     if (!soonest || remain < soonest.remain) {
       soonest = { event, remain, next };
@@ -1089,6 +1261,8 @@ function updateCountdowns(events, compact, { timelineList } = {}) {
     }
   });
 
+  checkAlarms(events, now);
+  updateTabBadge(soonest);
   highlightSoonestCard(soonest);
   if (timelineList) {
     renderTimeline(timelineList, events, compact, now, soonest);
@@ -1116,7 +1290,6 @@ function initShagMeter() {
   const explosionEl = section.querySelector("[data-shagmeter-explosion]");
 
   if (
-    !timelineList ||
     !meterEl ||
     !statusEl ||
     !goalInput ||
@@ -1133,6 +1306,9 @@ function initShagMeter() {
   let timelineItem = null;
 
   const renderTimelineCard = () => {
+    if (!timelineList) {
+      return;
+    }
     const now = new Date();
     const customEvents = loadCustomEvents();
     const events = getAllEvents(customEvents);
@@ -1140,6 +1316,9 @@ function initShagMeter() {
     let soonest = null;
     events.forEach(event => {
       const next = nextOccurrenceFor(event, now);
+      if (!next) {
+        return;
+      }
       const remain = next - now;
       if (!soonest || remain < soonest.remain) {
         soonest = { event, remain, next };
@@ -1358,9 +1537,21 @@ function initShagMeter() {
 function setAccentColor(color, { persist = false } = {}) {
   const resolved = resolveHexColor(color);
   document.documentElement.style.setProperty("--accent", resolved);
+  const accentValue = document.getElementById("accentValue");
+  if (accentValue) {
+    accentValue.textContent = resolved;
+  }
+  const accentControl = document.getElementById("accentControl");
+  if (accentControl && accentControl.value.toLowerCase() !== resolved) {
+    accentControl.value = resolved;
+  }
   if (persist) {
     writeStoredPreference(PREFERENCE_KEYS.accentColor, resolved);
   }
+}
+
+function resetAccentColor() {
+  setAccentColor(DEFAULT_ACCENT_COLOR, { persist: true });
 }
 
 function initBomboClockEasterEgg() {
@@ -1460,6 +1651,55 @@ function initBomboClockEasterEgg() {
       brand.classList.remove(animationClass);
     }
   });
+
+  // Session-only discoverability hint: after ~120s of inactivity, nudge the logo.
+  let idleTimer = null;
+  let hintShown = false;
+  const prefersReducedMotion =
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const showHint = () => {
+    if (hintShown || activationCount > 0) {
+      return;
+    }
+    hintShown = true;
+    brand.classList.add("brand--hint");
+    brand.setAttribute("title", "Probeer eens te klikken...");
+    if (!brand.querySelector(".brand__hint-dot")) {
+      const dot = document.createElement("span");
+      dot.className = "brand__hint-dot";
+      dot.setAttribute("aria-hidden", "true");
+      brand.appendChild(dot);
+    }
+  };
+
+  const clearHint = () => {
+    brand.classList.remove("brand--hint");
+    const dot = brand.querySelector(".brand__hint-dot");
+    if (dot) {
+      dot.remove();
+    }
+  };
+
+  const resetIdle = () => {
+    if (prefersReducedMotion || activationCount > 0) {
+      return;
+    }
+    hintShown = false;
+    clearHint();
+    if (idleTimer) {
+      clearTimeout(idleTimer);
+    }
+    idleTimer = setTimeout(showHint, 120000);
+  };
+
+  ["mousemove", "keydown", "scroll", "touchstart"].forEach(type => {
+    window.addEventListener(type, resetIdle, { passive: true });
+  });
+  brand.addEventListener("click", clearHint);
+  resetIdle();
 }
 
 function setEditingState(event) {
@@ -1471,6 +1711,17 @@ function setEditingState(event) {
   const notesInput = document.getElementById("notesInput");
   const cancelEdit = document.getElementById("cancelEdit");
   const submitBtn = document.getElementById("submitBtn");
+  const weekdayPicker = document.getElementById("weekdayPicker");
+  const weekdayBoxes = document.querySelectorAll('#weekdayPicker input[name="weekday"]');
+
+  const setWeekdayBoxes = (days = []) => {
+    weekdayBoxes.forEach(box => {
+      box.checked = days.includes(Number(box.value));
+    });
+    if (weekdayPicker) {
+      weekdayPicker.hidden = !days.length && (!recurrenceSelect || recurrenceSelect.value !== "SpecificWeekdays");
+    }
+  };
 
   if (!event) {
     editingId.value = "";
@@ -1479,6 +1730,10 @@ function setEditingState(event) {
     recurrenceSelect.value = "Daily";
     colorInput.value = getCurrentAccentColor();
     notesInput.value = "";
+    setWeekdayBoxes([]);
+    if (weekdayPicker) {
+      weekdayPicker.hidden = true;
+    }
     cancelEdit.hidden = true;
     submitBtn.textContent = "Save cue";
     return;
@@ -1490,8 +1745,513 @@ function setEditingState(event) {
   recurrenceSelect.value = event.recurrence;
   colorInput.value = resolveHexColor(event.color, getCurrentAccentColor());
   notesInput.value = event.notes || "";
+  setWeekdayBoxes(event.recurrence === "SpecificWeekdays" ? event.weekdays || [] : []);
+  if (weekdayPicker) {
+    weekdayPicker.hidden = event.recurrence !== "SpecificWeekdays";
+  }
   cancelEdit.hidden = false;
   submitBtn.textContent = "Update cue";
+}
+
+const CUES_EXPORT_SCHEMA = "shagwekker.cues.v1";
+let toastStackEl = null;
+
+function initToasts() {
+  toastStackEl = document.getElementById("toastStack");
+}
+
+function showToast(message, { tone = "info", duration = 4000 } = {}) {
+  if (!toastStackEl) {
+    toastStackEl = document.getElementById("toastStack");
+  }
+  if (!toastStackEl) {
+    return;
+  }
+  const toast = document.createElement("div");
+  toast.className = `toast toast--${tone}`;
+  toast.setAttribute("role", "status");
+
+  const text = document.createElement("span");
+  text.className = "toast__message";
+  text.textContent = message;
+  toast.appendChild(text);
+
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "toast__close";
+  close.setAttribute("aria-label", "Melding sluiten");
+  close.textContent = "×";
+  toast.appendChild(close);
+
+  const dismiss = () => {
+    if (!toast.isConnected) {
+      return;
+    }
+    toast.classList.add("toast--leaving");
+    const remove = () => toast.remove();
+    toast.addEventListener("transitionend", remove, { once: true });
+    setTimeout(remove, 400);
+  };
+
+  close.addEventListener("click", dismiss);
+  toastStackEl.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add("toast--visible"));
+
+  if (duration > 0) {
+    setTimeout(dismiss, duration);
+  }
+}
+
+let lastAnnouncedEvent = null;
+
+function announceNextEvent(name) {
+  const announcer = document.getElementById("nextEventAnnouncer");
+  if (!announcer || !name || name === lastAnnouncedEvent) {
+    return;
+  }
+  lastAnnouncedEvent = name;
+  announcer.textContent = `Volgende cue: ${name}`;
+}
+
+function initMobileNav() {
+  const toggle = document.getElementById("navToggle");
+  const nav = document.querySelector(".site-nav");
+  const backdrop = document.getElementById("navBackdrop");
+  const main = document.getElementById("main");
+  if (!toggle || !nav) {
+    return;
+  }
+
+  const setOpen = isOpen => {
+    nav.classList.toggle("site-nav--open", isOpen);
+    toggle.setAttribute("aria-expanded", String(isOpen));
+    toggle.setAttribute("aria-label", isOpen ? "Menu sluiten" : "Menu openen");
+    if (backdrop) {
+      backdrop.hidden = !isOpen;
+    }
+    if (main && "inert" in HTMLElement.prototype) {
+      main.inert = isOpen;
+    }
+  };
+
+  toggle.addEventListener("click", () => {
+    setOpen(!nav.classList.contains("site-nav--open"));
+  });
+
+  nav.addEventListener("click", event => {
+    if (event.target.closest("a")) {
+      setOpen(false);
+    }
+  });
+
+  if (backdrop) {
+    backdrop.addEventListener("click", () => setOpen(false));
+  }
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && nav.classList.contains("site-nav--open")) {
+      setOpen(false);
+      toggle.focus();
+    }
+  });
+}
+
+function exportCuesToJson() {
+  const payload = {
+    schema: CUES_EXPORT_SCHEMA,
+    exportedAt: new Date().toISOString(),
+    events: loadCustomEvents()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `shagwekker-cues-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showToast("Cues geëxporteerd", { tone: "success" });
+}
+
+function parseImportedCues(text) {
+  const parsed = JSON.parse(text);
+  const rawEvents = Array.isArray(parsed) ? parsed : parsed && parsed.events;
+  if (!Array.isArray(rawEvents)) {
+    throw new Error("Geen geldige cue-lijst gevonden.");
+  }
+  return normalizeCustomEvents(rawEvents);
+}
+
+/* ── Phase B: alarm-clock functionality ── */
+const NOTIFY_KEY = "shagwekker.notifications.enabled.v1";
+const CHIME_KEY = "shagwekker.chime.enabled.v1";
+const ALARM_FIRE_WINDOW_MS = 5000;
+
+let notificationsEnabled = false;
+let chimeEnabled = true;
+let chimeEl = null;
+const alarmNextTimes = new Map();
+let alarmPrimed = false;
+
+function initChime() {
+  chimeEl = document.getElementById("chimeAudio");
+  chimeEnabled = readStoredPreference(CHIME_KEY) !== "false";
+  const chimeToggle = document.getElementById("chimeToggle");
+  if (!chimeToggle) {
+    return;
+  }
+  const sync = () => {
+    chimeToggle.setAttribute("aria-pressed", String(chimeEnabled));
+    chimeToggle.textContent = chimeEnabled ? "Geluid: aan" : "Geluid: uit";
+  };
+  sync();
+  chimeToggle.addEventListener("click", () => {
+    chimeEnabled = !chimeEnabled;
+    writeStoredPreference(CHIME_KEY, chimeEnabled ? "true" : "false");
+    sync();
+  });
+}
+
+function playChime() {
+  if (!chimeEnabled || !chimeEl) {
+    return;
+  }
+  try {
+    const instance = chimeEl.cloneNode(true);
+    instance.volume = 0.7;
+    const played = instance.play();
+    if (played && typeof played.catch === "function") {
+      played.catch(() => {});
+    }
+  } catch (error) {
+    console.warn("Chime kon niet afspelen", error);
+  }
+}
+
+function initNotifications() {
+  const toggle = document.getElementById("notifyToggle");
+  const supported = typeof window !== "undefined" && "Notification" in window;
+  notificationsEnabled =
+    supported && Notification.permission === "granted" && readStoredPreference(NOTIFY_KEY) === "true";
+
+  if (!toggle) {
+    return;
+  }
+  if (!supported) {
+    toggle.disabled = true;
+    toggle.textContent = "Geen notificaties";
+    return;
+  }
+
+  const sync = () => {
+    toggle.setAttribute("aria-pressed", String(notificationsEnabled));
+    toggle.textContent = notificationsEnabled ? "Notificaties uit" : "Notificaties aan";
+  };
+  sync();
+
+  toggle.addEventListener("click", async () => {
+    if (notificationsEnabled) {
+      notificationsEnabled = false;
+      writeStoredPreference(NOTIFY_KEY, "false");
+      sync();
+      return;
+    }
+    let permission = Notification.permission;
+    if (permission !== "granted") {
+      try {
+        permission = await Notification.requestPermission();
+      } catch (error) {
+        console.warn("Notificatiepermissie mislukt", error);
+      }
+    }
+    if (permission === "granted") {
+      notificationsEnabled = true;
+      writeStoredPreference(NOTIFY_KEY, "true");
+      // The click is a user gesture — prime audio so chimes can play later.
+      playChime();
+      showToast("Notificaties staan aan", { tone: "success" });
+    } else {
+      showToast("Notificaties geblokkeerd in je browser", { tone: "warning" });
+    }
+    sync();
+  });
+}
+
+function fireAlarm(event) {
+  playChime();
+  if (notificationsEnabled && "Notification" in window && Notification.permission === "granted") {
+    try {
+      new Notification(event.label, {
+        body: "Tijd voor je shagpauze.",
+        icon: "/android-chrome-192x192.png",
+        tag: event.id,
+        renotify: true
+      });
+    } catch (error) {
+      console.warn("Notificatie kon niet getoond worden", error);
+    }
+  }
+  showToast(`${event.label} — nu!`, { tone: "info" });
+}
+
+function checkAlarms(events, now) {
+  const nowMs = now.getTime();
+  events.forEach(event => {
+    const next = nextOccurrenceFor(event, now);
+    if (!next) {
+      alarmNextTimes.delete(event.id);
+      return;
+    }
+    const nextMs = next.getTime();
+    const prev = alarmNextTimes.get(event.id);
+    if (alarmPrimed && prev !== undefined && nextMs > prev && nowMs >= prev && nowMs - prev < ALARM_FIRE_WINDOW_MS) {
+      fireAlarm(event);
+    }
+    alarmNextTimes.set(event.id, nextMs);
+  });
+  alarmPrimed = true;
+}
+
+let tabBadgeActive = false;
+let tabBadgeFlash = false;
+let originalTitle = "";
+let originalFavicon = "";
+let badgeFaviconUrl = "";
+let faviconLink = null;
+
+function buildBadgeFavicon() {
+  const base = document.querySelector('link[rel="icon"][sizes="32x32"]') || document.querySelector('link[rel="icon"]');
+  faviconLink = base;
+  if (base) {
+    originalFavicon = base.href;
+  }
+  if (typeof document.createElement !== "function") {
+    return;
+  }
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 32;
+      canvas.height = 32;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, 32, 32);
+      ctx.beginPath();
+      ctx.arc(24, 8, 7, 0, Math.PI * 2);
+      ctx.fillStyle = "#ff2d2d";
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = "#ffffff";
+      ctx.stroke();
+      badgeFaviconUrl = canvas.toDataURL("image/png");
+    } catch (error) {
+      badgeFaviconUrl = "";
+    }
+  };
+  if (originalFavicon) {
+    img.src = originalFavicon;
+  }
+}
+
+function initTabBadge() {
+  originalTitle = document.title;
+  buildBadgeFavicon();
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      clearTabBadge();
+    }
+  });
+}
+
+function setFavicon(url) {
+  if (faviconLink && url) {
+    faviconLink.href = url;
+  }
+}
+
+function clearTabBadge() {
+  if (!tabBadgeActive) {
+    return;
+  }
+  tabBadgeActive = false;
+  tabBadgeFlash = false;
+  document.title = originalTitle;
+  setFavicon(originalFavicon);
+}
+
+function updateTabBadge(soonest) {
+  const imminent = Boolean(soonest) && soonest.remain <= 60000 && soonest.remain >= 0;
+  if (!imminent) {
+    clearTabBadge();
+    return;
+  }
+  tabBadgeActive = true;
+  if (document.hidden === false) {
+    return;
+  }
+  tabBadgeFlash = !tabBadgeFlash;
+  document.title = tabBadgeFlash ? `(!) ${originalTitle}` : originalTitle;
+  setFavicon(tabBadgeFlash && badgeFaviconUrl ? badgeFaviconUrl : originalFavicon);
+}
+
+const ONBOARDED_KEY = "shagwekker.onboarded.v1";
+
+function initOnboarding() {
+  if (readStoredPreference(ONBOARDED_KEY) === "true") {
+    return;
+  }
+  const steps = [
+    { sel: "#planner", title: "Nicotineteller", body: "Hier telt je eerstvolgende shagpauze realtime af." },
+    { sel: "#createEventForm", title: "Las een pauze in", body: "Maak eigen cues met tijd, herhaling en kleur." },
+    { sel: "#notifyToggle", title: "Zet de wekker aan", body: "Schakel notificaties en geluid in zodat ShagWekker echt rinkelt." },
+    { sel: "#soundboard", title: "Soundboard & audio", body: "Kies een track of druk op een soundboard-pad." }
+  ].filter(step => document.querySelector(step.sel));
+
+  if (!steps.length) {
+    return;
+  }
+
+  let index = 0;
+  let lastTarget = null;
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "coachmark__backdrop";
+
+  const bubble = document.createElement("div");
+  bubble.className = "coachmark";
+  bubble.setAttribute("role", "dialog");
+  bubble.setAttribute("aria-modal", "true");
+  bubble.setAttribute("aria-label", "Rondleiding");
+  bubble.innerHTML = `
+    <h3 class="coachmark__title"></h3>
+    <p class="coachmark__body"></p>
+    <div class="coachmark__nav">
+      <span class="coachmark__dots"></span>
+      <div class="coachmark__buttons">
+        <button type="button" class="btn ghost btn--mini" data-coach="skip">Overslaan</button>
+        <button type="button" class="btn primary btn--mini" data-coach="next">Volgende</button>
+      </div>
+    </div>
+  `;
+
+  const finish = () => {
+    writeStoredPreference(ONBOARDED_KEY, "true");
+    if (lastTarget) {
+      lastTarget.classList.remove("coachmark-target");
+    }
+    backdrop.remove();
+    bubble.remove();
+    document.removeEventListener("keydown", onKey);
+  };
+
+  const render = () => {
+    const step = steps[index];
+    const target = document.querySelector(step.sel);
+    if (lastTarget) {
+      lastTarget.classList.remove("coachmark-target");
+    }
+    if (target) {
+      target.classList.add("coachmark-target");
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      lastTarget = target;
+    }
+    bubble.querySelector(".coachmark__title").textContent = step.title;
+    bubble.querySelector(".coachmark__body").textContent = step.body;
+    bubble.querySelector(".coachmark__dots").textContent = `${index + 1} / ${steps.length}`;
+    bubble.querySelector('[data-coach="next"]').textContent =
+      index === steps.length - 1 ? "Klaar" : "Volgende";
+  };
+
+  const onKey = event => {
+    if (event.key === "Escape") {
+      finish();
+    }
+  };
+
+  bubble.addEventListener("click", event => {
+    const action = event.target.closest("[data-coach]")?.dataset.coach;
+    if (action === "skip") {
+      finish();
+    } else if (action === "next") {
+      if (index >= steps.length - 1) {
+        finish();
+      } else {
+        index += 1;
+        render();
+      }
+    }
+  });
+
+  document.addEventListener("keydown", onKey);
+  document.body.appendChild(backdrop);
+  document.body.appendChild(bubble);
+  render();
+}
+
+function initServiceWorker() {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+    return;
+  }
+  const isLocalhost = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  if (location.protocol !== "https:" && !isLocalhost) {
+    return;
+  }
+  // Escape hatch: visiting ?unregister tears down the SW and caches.
+  if (new URLSearchParams(location.search).has("unregister")) {
+    navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(reg => reg.unregister()));
+    if (window.caches && caches.keys) {
+      caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
+    }
+    return;
+  }
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(error => {
+      console.warn("Service worker registratie mislukt", error);
+    });
+  });
+}
+
+const THEME_KEY = "shagwekker.theme.v1";
+
+function applyResolvedTheme(pref) {
+  const root = document.documentElement;
+  if (pref === "light" || pref === "dark" || pref === "sepia") {
+    root.setAttribute("data-theme", pref);
+    return;
+  }
+  const prefersLight =
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: light)").matches;
+  root.setAttribute("data-theme", prefersLight ? "light" : "dark");
+}
+
+function initThemeSwitcher() {
+  const select = document.getElementById("themeSelect");
+  const stored = readStoredPreference(THEME_KEY) || "auto";
+  applyResolvedTheme(stored);
+
+  if (typeof window !== "undefined" && window.matchMedia) {
+    const mq = window.matchMedia("(prefers-color-scheme: light)");
+    const onChange = () => {
+      if ((readStoredPreference(THEME_KEY) || "auto") === "auto") {
+        applyResolvedTheme("auto");
+      }
+    };
+    if (mq.addEventListener) {
+      mq.addEventListener("change", onChange);
+    }
+  }
+
+  if (!select) {
+    return;
+  }
+  select.value = stored;
+  select.addEventListener("change", () => {
+    writeStoredPreference(THEME_KEY, select.value);
+    applyResolvedTheme(select.value);
+  });
 }
 
 (function init() {
@@ -1499,6 +2259,14 @@ function setEditingState(event) {
   if (footerYear) {
     footerYear.textContent = new Date().getFullYear();
   }
+
+  initToasts();
+  initThemeSwitcher();
+  initServiceWorker();
+  initMobileNav();
+  initChime();
+  initNotifications();
+  initTabBadge();
 
   const contrastToggle = document.getElementById("contrastToggle");
   const updateHighContrast = isActive => {
@@ -1533,10 +2301,19 @@ function setEditingState(event) {
     });
   }
 
+  const accentReset = document.getElementById("accentReset");
+  if (accentReset) {
+    accentReset.addEventListener("click", () => {
+      resetAccentColor();
+    });
+  }
+
   initBomboClockEasterEgg();
 
   initAudioPlayer();
+  initSoundboard();
   initShagMeter();
+  initOnboarding();
 
   const customBoard = document.getElementById("customBoard");
   const timelineList = document.getElementById("timelineList");
@@ -1570,6 +2347,28 @@ function setEditingState(event) {
   };
 
   renderAll();
+
+  const recurrenceSelect = document.getElementById("recurrenceSelect");
+  const weekdayPicker = document.getElementById("weekdayPicker");
+  const syncWeekdayPicker = () => {
+    if (weekdayPicker && recurrenceSelect) {
+      weekdayPicker.hidden = recurrenceSelect.value !== "SpecificWeekdays";
+    }
+  };
+  if (recurrenceSelect) {
+    recurrenceSelect.addEventListener("change", syncWeekdayPicker);
+    syncWeekdayPicker();
+  }
+
+  window.addEventListener("storage", evt => {
+    if (evt.key === STORAGE_KEY) {
+      customEvents = loadCustomEvents();
+      setEditingState(null);
+      renderAll();
+    } else if (evt.key === PREFERENCE_KEYS.accentColor && evt.newValue) {
+      setAccentColor(evt.newValue);
+    }
+  });
 
   precisionToggle.addEventListener("click", () => {
     compactMode = !compactMode;
@@ -1608,6 +2407,7 @@ function setEditingState(event) {
     saveCustomEvents(customEvents);
     setEditingState(null);
     renderAll();
+    showToast("Demo-cues geladen", { tone: "info" });
   });
 
   clearCustom.addEventListener("click", () => {
@@ -1617,8 +2417,51 @@ function setEditingState(event) {
       saveCustomEvents(customEvents);
       setEditingState(null);
       renderAll();
+      showToast("Alle cues verwijderd", { tone: "warning" });
     }
   });
+
+  const exportCues = document.getElementById("exportCues");
+  const importCues = document.getElementById("importCues");
+  const importCuesFile = document.getElementById("importCuesFile");
+
+  if (exportCues) {
+    exportCues.addEventListener("click", exportCuesToJson);
+  }
+
+  if (importCues && importCuesFile) {
+    importCues.addEventListener("click", () => importCuesFile.click());
+    importCuesFile.addEventListener("change", () => {
+      const file = importCuesFile.files && importCuesFile.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const imported = parseImportedCues(String(reader.result));
+          const replace = customEvents.length
+            ? confirm("Bestaande cues vervangen? Kies Annuleren om samen te voegen.")
+            : true;
+          if (replace) {
+            customEvents = imported;
+          } else {
+            customEvents = normalizeCustomEvents([
+              ...customEvents,
+              ...imported.map(evt => ({ ...evt, id: uniqueId() }))
+            ]);
+          }
+          saveCustomEvents(customEvents);
+          setEditingState(null);
+          renderAll();
+          showToast(`${imported.length} cue(s) geïmporteerd`, { tone: "success" });
+        } catch (error) {
+          console.warn("Import mislukt", error);
+          showToast("Import mislukt: ongeldig JSON-bestand", { tone: "warning" });
+        }
+      };
+      reader.readAsText(file);
+      importCuesFile.value = "";
+    });
+  }
 
   customBoard.addEventListener("click", event => {
     const button = event.target.closest("button[data-action]");
@@ -1632,6 +2475,7 @@ function setEditingState(event) {
       saveCustomEvents(customEvents);
       setEditingState(null);
       renderAll();
+      showToast("Cue verwijderd", { tone: "info" });
     }
     if (action === "edit") {
       const targetEvent = customEvents.find(evt => evt.id === id);
@@ -1654,26 +2498,36 @@ function setEditingState(event) {
     const recurrence = formData.get("recurrence").toString();
     const color = resolveHexColor(formData.get("color").toString(), getCurrentAccentColor());
     const notes = formData.get("notes").toString().trim();
+    const weekdays = normalizeWeekdays(formData.getAll("weekday").map(Number));
 
     if (!/^\d{2}:\d{2}$/.test(time)) {
-      alert("Please provide a valid time in HH:MM format.");
+      showToast("Geef een geldige tijd op (HH:MM)", { tone: "warning" });
       return;
     }
 
+    if (recurrence === "SpecificWeekdays" && !weekdays.length) {
+      showToast("Kies minstens één dag", { tone: "warning" });
+      return;
+    }
+
+    const fields = { label, time, recurrence, color, notes };
+    if (recurrence === "SpecificWeekdays") {
+      fields.weekdays = weekdays;
+    }
+
     if (id) {
-      customEvents = customEvents.map(evt => (evt.id === id ? { ...evt, label, time, recurrence, color, notes } : evt));
+      customEvents = customEvents.map(evt => (evt.id === id ? { ...evt, weekdays: undefined, ...fields } : evt));
     } else {
-      customEvents = [
-        ...customEvents,
-        { id: uniqueId(), label, time, recurrence, color, notes }
-      ];
+      customEvents = [...customEvents, { id: uniqueId(), ...fields }];
     }
 
     customEvents = normalizeCustomEvents(customEvents);
     saveCustomEvents(customEvents);
     renderAll();
     createEventForm.reset();
+    syncWeekdayPicker();
     setEditingState(null);
+    showToast(id ? "Cue bijgewerkt" : "Cue opgeslagen", { tone: "success" });
   });
 
   setInterval(() => {
