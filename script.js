@@ -2095,6 +2095,165 @@ function updateTabBadge(soonest) {
   setFavicon(tabBadgeFlash && badgeFaviconUrl ? badgeFaviconUrl : originalFavicon);
 }
 
+const ONBOARDED_KEY = "shagwekker.onboarded.v1";
+
+function initOnboarding() {
+  if (readStoredPreference(ONBOARDED_KEY) === "true") {
+    return;
+  }
+  const steps = [
+    { sel: "#planner", title: "Nicotineteller", body: "Hier telt je eerstvolgende shagpauze realtime af." },
+    { sel: "#createEventForm", title: "Las een pauze in", body: "Maak eigen cues met tijd, herhaling en kleur." },
+    { sel: "#notifyToggle", title: "Zet de wekker aan", body: "Schakel notificaties en geluid in zodat ShagWekker echt rinkelt." },
+    { sel: "#soundboard", title: "Soundboard & audio", body: "Kies een track of druk op een soundboard-pad." }
+  ].filter(step => document.querySelector(step.sel));
+
+  if (!steps.length) {
+    return;
+  }
+
+  let index = 0;
+  let lastTarget = null;
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "coachmark__backdrop";
+
+  const bubble = document.createElement("div");
+  bubble.className = "coachmark";
+  bubble.setAttribute("role", "dialog");
+  bubble.setAttribute("aria-modal", "true");
+  bubble.setAttribute("aria-label", "Rondleiding");
+  bubble.innerHTML = `
+    <h3 class="coachmark__title"></h3>
+    <p class="coachmark__body"></p>
+    <div class="coachmark__nav">
+      <span class="coachmark__dots"></span>
+      <div class="coachmark__buttons">
+        <button type="button" class="btn ghost btn--mini" data-coach="skip">Overslaan</button>
+        <button type="button" class="btn primary btn--mini" data-coach="next">Volgende</button>
+      </div>
+    </div>
+  `;
+
+  const finish = () => {
+    writeStoredPreference(ONBOARDED_KEY, "true");
+    if (lastTarget) {
+      lastTarget.classList.remove("coachmark-target");
+    }
+    backdrop.remove();
+    bubble.remove();
+    document.removeEventListener("keydown", onKey);
+  };
+
+  const render = () => {
+    const step = steps[index];
+    const target = document.querySelector(step.sel);
+    if (lastTarget) {
+      lastTarget.classList.remove("coachmark-target");
+    }
+    if (target) {
+      target.classList.add("coachmark-target");
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      lastTarget = target;
+    }
+    bubble.querySelector(".coachmark__title").textContent = step.title;
+    bubble.querySelector(".coachmark__body").textContent = step.body;
+    bubble.querySelector(".coachmark__dots").textContent = `${index + 1} / ${steps.length}`;
+    bubble.querySelector('[data-coach="next"]').textContent =
+      index === steps.length - 1 ? "Klaar" : "Volgende";
+  };
+
+  const onKey = event => {
+    if (event.key === "Escape") {
+      finish();
+    }
+  };
+
+  bubble.addEventListener("click", event => {
+    const action = event.target.closest("[data-coach]")?.dataset.coach;
+    if (action === "skip") {
+      finish();
+    } else if (action === "next") {
+      if (index >= steps.length - 1) {
+        finish();
+      } else {
+        index += 1;
+        render();
+      }
+    }
+  });
+
+  document.addEventListener("keydown", onKey);
+  document.body.appendChild(backdrop);
+  document.body.appendChild(bubble);
+  render();
+}
+
+function initServiceWorker() {
+  if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+    return;
+  }
+  const isLocalhost = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+  if (location.protocol !== "https:" && !isLocalhost) {
+    return;
+  }
+  // Escape hatch: visiting ?unregister tears down the SW and caches.
+  if (new URLSearchParams(location.search).has("unregister")) {
+    navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(reg => reg.unregister()));
+    if (window.caches && caches.keys) {
+      caches.keys().then(keys => keys.forEach(key => caches.delete(key)));
+    }
+    return;
+  }
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(error => {
+      console.warn("Service worker registratie mislukt", error);
+    });
+  });
+}
+
+const THEME_KEY = "shagwekker.theme.v1";
+
+function applyResolvedTheme(pref) {
+  const root = document.documentElement;
+  if (pref === "light" || pref === "dark" || pref === "sepia") {
+    root.setAttribute("data-theme", pref);
+    return;
+  }
+  const prefersLight =
+    typeof window !== "undefined" &&
+    window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: light)").matches;
+  root.setAttribute("data-theme", prefersLight ? "light" : "dark");
+}
+
+function initThemeSwitcher() {
+  const select = document.getElementById("themeSelect");
+  const stored = readStoredPreference(THEME_KEY) || "auto";
+  applyResolvedTheme(stored);
+
+  if (typeof window !== "undefined" && window.matchMedia) {
+    const mq = window.matchMedia("(prefers-color-scheme: light)");
+    const onChange = () => {
+      if ((readStoredPreference(THEME_KEY) || "auto") === "auto") {
+        applyResolvedTheme("auto");
+      }
+    };
+    if (mq.addEventListener) {
+      mq.addEventListener("change", onChange);
+    }
+  }
+
+  if (!select) {
+    return;
+  }
+  select.value = stored;
+  select.addEventListener("change", () => {
+    writeStoredPreference(THEME_KEY, select.value);
+    applyResolvedTheme(select.value);
+  });
+}
+
 (function init() {
   const footerYear = document.getElementById("footerYear");
   if (footerYear) {
@@ -2102,6 +2261,8 @@ function updateTabBadge(soonest) {
   }
 
   initToasts();
+  initThemeSwitcher();
+  initServiceWorker();
   initMobileNav();
   initChime();
   initNotifications();
@@ -2152,6 +2313,7 @@ function updateTabBadge(soonest) {
   initAudioPlayer();
   initSoundboard();
   initShagMeter();
+  initOnboarding();
 
   const customBoard = document.getElementById("customBoard");
   const timelineList = document.getElementById("timelineList");

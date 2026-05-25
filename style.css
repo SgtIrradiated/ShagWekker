@@ -19,6 +19,48 @@
   --grid-gap: clamp(1rem, 2vw, 1.8rem);
 }
 
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-1: #eef1fb;
+  --bg-2: #dde3f5;
+  --surface: rgba(255, 255, 255, 0.78);
+  --surface-strong: rgba(255, 255, 255, 0.92);
+  --ink: #161b2e;
+  --muted: #51597a;
+  --ring: rgba(60, 110, 220, 0.45);
+  --shadow-xl: 0 30px 70px rgba(40, 60, 120, 0.18);
+  --shadow-md: 0 16px 40px rgba(40, 60, 120, 0.14);
+}
+
+:root[data-theme="sepia"] {
+  color-scheme: light;
+  --bg-1: #efe2cc;
+  --bg-2: #e3d2b3;
+  --surface: rgba(255, 248, 236, 0.82);
+  --surface-strong: rgba(255, 250, 240, 0.94);
+  --ink: #3a2c1a;
+  --muted: #7a6750;
+  --ring: rgba(150, 110, 60, 0.45);
+  --shadow-xl: 0 30px 70px rgba(90, 70, 40, 0.2);
+  --shadow-md: 0 16px 40px rgba(90, 70, 40, 0.16);
+}
+
+.status-card__theme {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.status-card__theme select {
+  padding: 0.3rem 0.5rem;
+  border-radius: 8px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  border: 1px solid rgba(128, 128, 128, 0.3);
+}
+
 @property --shagmeter-progress {
   syntax: "<number>";
   inherits: false;
@@ -3087,4 +3129,65 @@ button {
     transform: scale(1.12);
     opacity: 1;
   }
+}
+
+/* ── Phase D: onboarding coachmarks ── */
+.coachmark__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(2, 5, 14, 0.6);
+  backdrop-filter: blur(2px);
+}
+
+.coachmark {
+  position: fixed;
+  z-index: 61;
+  left: 50%;
+  bottom: clamp(1rem, 5vh, 3rem);
+  transform: translateX(-50%);
+  width: min(420px, calc(100vw - 2rem));
+  padding: 1.25rem 1.4rem;
+  border-radius: var(--radius-md);
+  background: var(--surface-strong);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: var(--shadow-xl);
+  color: var(--ink);
+}
+
+.coachmark__title {
+  margin: 0 0 0.4rem;
+  font-size: 1.1rem;
+}
+
+.coachmark__body {
+  margin: 0 0 1rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.coachmark__nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.coachmark__dots {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.coachmark__buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.coachmark-target {
+  position: relative;
+  z-index: 60;
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+  border-radius: var(--radius-md);
+  scroll-margin: 2rem;
 }
