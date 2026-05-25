@@ -1,9 +1,20 @@
 <!doctype html>
-<html lang="en">
+<html lang="nl">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ShagWekker · Dynamic day designer</title>
+  <title>ShagWekker — Jouw dagelijkse shagpauze-wekker</title>
+  <meta name="description" content="ShagWekker is jouw dagelijkse shagpauze-wekker: tel realtime af naar je volgende pauze, las eigen rituelen in en laat je herinneren wanneer het tijd is." />
+  <meta name="theme-color" content="#0a0a0a" />
+  <meta property="og:title" content="ShagWekker — Jouw dagelijkse shagpauze-wekker" />
+  <meta property="og:description" content="Tel realtime af naar je volgende shagpauze, las eigen rituelen in en krijg een seintje wanneer het tijd is." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://shagwekker.nl/" />
+  <meta property="og:image" content="/assets/og-cover.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="ShagWekker — Jouw dagelijkse shagpauze-wekker" />
+  <meta name="twitter:description" content="Tel realtime af naar je volgende shagpauze, las eigen rituelen in en krijg een seintje wanneer het tijd is." />
+  <meta name="twitter:image" content="/assets/og-cover.png" />
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,32 +23,59 @@
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
   <link rel="manifest" href="/site.webmanifest">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "ShagWekker",
+    "url": "https://shagwekker.nl/",
+    "applicationCategory": "LifestyleApplication",
+    "operatingSystem": "Web",
+    "inLanguage": "nl-NL",
+    "description": "Jouw dagelijkse shagpauze-wekker: tel realtime af naar je volgende pauze en las eigen rituelen in.",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" }
+  }
+  </script>
 </head>
 <body>
+  <a class="skip-link" href="#main">Direct naar inhoud</a>
   <div class="page">
     <header class="site-header" id="top">
       <div class="brand" aria-label="ShagWekker">
-        <img src="assets/shag.png" alt="Placeholder logo illustration" class="brand__mark" />
+        <img src="assets/shag.png" alt="ShagWekker logo" class="brand__mark" />
         <div class="brand__text">
           <span class="brand__name">ShagWekker</span>
           <span class="brand__tag">Je kan nooit genoeg Shag roken.</span>
         </div>
       </div>
+      <button
+        class="site-nav__toggle"
+        id="navToggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="primaryNav"
+        aria-label="Menu openen"
+      >
+        <span class="site-nav__toggle-bar" aria-hidden="true"></span>
+        <span class="site-nav__toggle-bar" aria-hidden="true"></span>
+        <span class="site-nav__toggle-bar" aria-hidden="true"></span>
+      </button>
       <nav class="site-nav" aria-label="Primary">
-        <a href="#hero">Shag</a>
-        <a href="#planner">Nicotineteller</a>
-        <a href="#customize">Inlassen</a>
-        <a href="#insights">Insights</a>
-        <a href="shagmeter.html">ShagMeter</a>
-        <a href="gallery.html">Gallery</a>
-        <a href="library.html">ShagFiles</a>
+        <ul class="site-nav__list" id="primaryNav">
+          <li><a href="#hero">Shag</a></li>
+          <li><a href="#planner">Nicotineteller</a></li>
+          <li><a href="#customize">Inlassen</a></li>
+          <li><a href="#insights">Insights</a></li>
+          <li><a href="shagmeter.html">ShagMeter</a></li>
+          <li><a href="gallery.html">Gallery</a></li>
+          <li><a href="library.html">ShagFiles</a></li>
+          <li class="site-nav__action"><button class="btn ghost" id="contrastToggle" type="button" aria-pressed="false">High contrast</button></li>
+        </ul>
       </nav>
-      <div class="header-actions">
-        <button class="btn ghost" id="contrastToggle" type="button" aria-pressed="false">High contrast</button>
-      </div>
+      <div class="site-nav__backdrop" id="navBackdrop" hidden></div>
     </header>
 
-    <main>
+    <main id="main">
       <section class="hero" id="hero">
         <div class="hero__content">
           <p class="hero__eyebrow">Medemogelijk gemaakt door British American Tobacco</p>
@@ -80,6 +118,8 @@
           <div class="status-card__swatch">
             <label for="accentControl">Accent</label>
             <input type="color" id="accentControl" name="accentControl" value="#ff0000" aria-label="Pick accent color" />
+            <code id="accentValue" class="status-card__swatch-value">#ff0000</code>
+            <button type="button" id="accentReset" class="btn ghost btn--mini">Reset</button>
           </div>
         </article>
       </section>
@@ -97,7 +137,8 @@
             </div>
           </header>
           <p class="planner__intro">Laat de glimmende timeline jouw volgende shagmoment aftellen &mdash; standaard cues en persoonlijke inlassingen smelten samen.</p>
-          <ol id="timelineList" class="timeline" aria-live="polite"></ol>
+          <ol id="timelineList" class="timeline" aria-live="off"></ol>
+          <p id="nextEventAnnouncer" class="sr-only" aria-live="polite"></p>
         </div>
       </section>
 
@@ -108,7 +149,12 @@
               <p class="section-header__eyebrow">Als je maar niet genoeg van je Shag kan krijgen.</p>
               <h2>Las een shag pauze in;</h2>
             </div>
-            <button class="btn ghost" id="clearCustom" type="button">Clear all</button>
+            <div class="section-header__actions">
+              <button class="btn ghost" id="exportCues" type="button">Export JSON</button>
+              <button class="btn ghost" id="importCues" type="button">Import JSON</button>
+              <button class="btn ghost" id="clearCustom" type="button">Clear all</button>
+              <input type="file" id="importCuesFile" accept="application/json" hidden />
+            </div>
           </header>
           <form id="createEventForm" autocomplete="off">
             <input type="hidden" id="editingId" name="editingId" />
@@ -149,7 +195,7 @@
             <h3>Ingelasde ShagPauzes Overzicht</h3>
             <p id="customEmptyState" class="custom-empty">Las een ShagPauze in, en bewerk ze hier!</p>
           </div>
-          <div id="customBoard" class="card-grid card-grid--compact" role="list"></div>
+          <ul id="customBoard" class="card-grid card-grid--compact"></ul>
           <figure class="customize__placeholder">
             <img src="assets/Redwood-Gold-Ad-Arena-War-GTAO.webp" alt="Placeholder dashboard mockup" loading="lazy" />
             <figcaption></figcaption>
@@ -165,102 +211,41 @@
           </div>
           <p class="section-header__hint">Handige links als het gaat om Shag.</p>
         </header>
-        <div class="insights__hub" role="list">
-          <a
-            class="insight-tile"
-            href="https://ishetalpauze.nl"
-            role="listitem"
-            style="--tile-accent: #ff0000"
-          >
-            <span class="insight-tile__glow" aria-hidden="true"></span>
-            <span class="insight-tile__icon" aria-hidden="true">
-              <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" focusable="false">
-                <rect
-                  x="9"
-                  y="9"
-                  width="30"
-                  height="30"
-                  rx="12"
-                  ry="12"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  opacity="0.82"
-                />
-                <path
-                  d="M16 29c2.4-4.6 6.1-7.4 11.2-7.4 3.4 0 5.9 1.6 7.8 3.8"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  opacity="0.9"
-                />
-                <circle cx="20.5" cy="21" r="2.5" fill="currentColor" />
-              </svg>
-            </span>
-            <span class="insight-tile__label">IsHetAlPauze.nl</span>
-            <span class="insight-tile__hint">De inferieure voorganger van ShagWekker. (Plugin Circlejerk)</span>
-          </a>
+        <ul class="insights__hub">
+          <li>
+            <a
+              class="insight-tile"
+              href="https://ishetalpauze.nl"
+              style="--tile-accent: #ff0000"
+            >
+              <span class="insight-tile__glow" aria-hidden="true"></span>
+              <span class="insight-tile__icon" aria-hidden="true">
+                <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                  <rect x="9" y="9" width="30" height="30" rx="12" ry="12" fill="none" stroke="currentColor" stroke-width="2.5" opacity="0.82" />
+                  <path d="M16 29c2.4-4.6 6.1-7.4 11.2-7.4 3.4 0 5.9 1.6 7.8 3.8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9" />
+                  <circle cx="20.5" cy="21" r="2.5" fill="currentColor" />
+                </svg>
+              </span>
+              <span class="insight-tile__label">IsHetAlPauze.nl</span>
+              <span class="insight-tile__hint">De inferieure voorganger van ShagWekker. (Plugin Circlejerk)</span>
+            </a>
+          </li>
 
-          <a
-            class="insight-tile"
-            href="https://champagne.pages.dev/"
-            role="listitem"
-            style="--tile-accent: #1e1446"
-             >
-            <span class="insight-tile__glow" aria-hidden="true"></span>
-            <span class="insight-tile__icon" aria-hidden="true">
-              <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fimages.rawpixel.com%2Fimage_transparent_png_800%2FczNmcy1wcml2YXRlL3Jhd3BpeGVsX2ltYWdlcy93ZWJzaXRlX2NvbnRlbnQvam9iNjY5LTAwMy1wLWwxYWR0cDZ3LnBuZw.png" alt="" loading="lazy" />
-            </span>
-            <span class="insight-tile__label">Champagne Pagina's</span>
-            <span class="insight-tile__hint">ߍirate, save money, buy <b><i>Shag</i></b> ߥ⼯span>
-          </a>
-
-
-          <a
-            class="insight-tile"
-            href="https://chatgpt.com/"
-            role="listitem"
-            style="--tile-accent: #FFFFFF"
-          >
-            <span class="insight-tile__glow" aria-hidden="true"></span>
-            <span class="insight-tile__icon" aria-hidden="true">
-              <img src="https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fwww.freepnglogos.com%2Fuploads%2Flogo-chatgpt-png%2Fchatgpt-brand-logo-transparent.png" alt="" loading="lazy" />
-            </span>
-            <span class="insight-tile__label">ChatGPT</span>
-            <span class="insight-tile__hint">ChatGPT LLM</span>
-          </a>
-
-          <a
-            class="insight-tile"
-            href="https://jensen.nl/"
-            role="listitem"
-            style="--tile-accent: #ffd447"
-          >
-            <span class="insight-tile__glow" aria-hidden="true"></span>
-            <span class="insight-tile__icon" aria-hidden="true">
-              <img src="http://de-jensen-show.myshopify.com/cdn/shop/files/djs-logo.png" alt="" loading="lazy" />
-            </span>
-            <span class="insight-tile__label"><b>JENSEN</b></span>
-            <span class="insight-tile__hint">Ontdek meer via <b>JENSEN.nl.</b></span>
-          </a>
-          
-          <a
-            class="insight-tile"
-            href="https://1337x.to/"
-            role="listitem"
-            style="--tile-accent: #FF6D00"
-          >
-            <span class="insight-tile__glow" aria-hidden="true"></span>
-            <span class="insight-tile__icon" aria-hidden="true">
-              <img src="http://1337x.to/images/logo.svg" alt="" loading="lazy" />
-            </span>
-            <span class="insight-tile__label">1337x.to</span>
-            <span class="insight-tile__hint">1337x - <b>Gratuit</b> zooi</span>
-          </a>
-
-        </div>
+          <li>
+            <a
+              class="insight-tile"
+              href="https://jensen.nl/"
+              style="--tile-accent: #ffd447"
+            >
+              <span class="insight-tile__glow" aria-hidden="true"></span>
+              <span class="insight-tile__icon" aria-hidden="true">
+                <img src="assets/jensen.svg" alt="" width="48" height="48" loading="lazy" />
+              </span>
+              <span class="insight-tile__label"><b>JENSEN</b></span>
+              <span class="insight-tile__hint">Ontdek meer via <b>JENSEN.nl.</b></span>
+            </a>
+          </li>
+        </ul>
       </section>
 
       <section class="audio-lounge" id="audio-lounge">
@@ -422,6 +407,8 @@
       <a class="back-to-top" href="#top">Back to top</a>
     </footer>
   </div>
+
+  <div id="toastStack" class="toast-stack" role="region" aria-label="Meldingen" aria-live="polite"></div>
 
   <script src="script.js"></script>
 </body>

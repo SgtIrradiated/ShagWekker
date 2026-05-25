@@ -850,8 +850,16 @@ function renderCustomBoard(container, events, emptyStateEl) {
     return;
   }
   emptyStateEl.hidden = true;
+  const isList = container.tagName === "UL" || container.tagName === "OL";
   events.forEach(event => {
-    container.appendChild(buildEventCard(event, "custom"));
+    const card = buildEventCard(event, "custom");
+    if (isList) {
+      const li = document.createElement("li");
+      li.appendChild(card);
+      container.appendChild(li);
+    } else {
+      container.appendChild(card);
+    }
   });
 }
 
@@ -1046,6 +1054,7 @@ function updateSummaries(now, events, soonest) {
 
   if (soonest) {
     nextEventName.textContent = `${soonest.event.label} · ${soonest.event.time}`;
+    announceNextEvent(soonest.event.label);
     nextEventCountdown.textContent = formatCountdown(diffParts(soonest.remain), false);
     const focusDetail = soonest.event.notes || soonest.event.description;
     focusMessage.textContent = focusDetail
@@ -1358,9 +1367,21 @@ function initShagMeter() {
 function setAccentColor(color, { persist = false } = {}) {
   const resolved = resolveHexColor(color);
   document.documentElement.style.setProperty("--accent", resolved);
+  const accentValue = document.getElementById("accentValue");
+  if (accentValue) {
+    accentValue.textContent = resolved;
+  }
+  const accentControl = document.getElementById("accentControl");
+  if (accentControl && accentControl.value.toLowerCase() !== resolved) {
+    accentControl.value = resolved;
+  }
   if (persist) {
     writeStoredPreference(PREFERENCE_KEYS.accentColor, resolved);
   }
+}
+
+function resetAccentColor() {
+  setAccentColor(DEFAULT_ACCENT_COLOR, { persist: true });
 }
 
 function initBomboClockEasterEgg() {
@@ -1494,11 +1515,144 @@ function setEditingState(event) {
   submitBtn.textContent = "Update cue";
 }
 
+const CUES_EXPORT_SCHEMA = "shagwekker.cues.v1";
+let toastStackEl = null;
+
+function initToasts() {
+  toastStackEl = document.getElementById("toastStack");
+}
+
+function showToast(message, { tone = "info", duration = 4000 } = {}) {
+  if (!toastStackEl) {
+    toastStackEl = document.getElementById("toastStack");
+  }
+  if (!toastStackEl) {
+    return;
+  }
+  const toast = document.createElement("div");
+  toast.className = `toast toast--${tone}`;
+  toast.setAttribute("role", "status");
+
+  const text = document.createElement("span");
+  text.className = "toast__message";
+  text.textContent = message;
+  toast.appendChild(text);
+
+  const close = document.createElement("button");
+  close.type = "button";
+  close.className = "toast__close";
+  close.setAttribute("aria-label", "Melding sluiten");
+  close.textContent = "×";
+  toast.appendChild(close);
+
+  const dismiss = () => {
+    if (!toast.isConnected) {
+      return;
+    }
+    toast.classList.add("toast--leaving");
+    const remove = () => toast.remove();
+    toast.addEventListener("transitionend", remove, { once: true });
+    setTimeout(remove, 400);
+  };
+
+  close.addEventListener("click", dismiss);
+  toastStackEl.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add("toast--visible"));
+
+  if (duration > 0) {
+    setTimeout(dismiss, duration);
+  }
+}
+
+let lastAnnouncedEvent = null;
+
+function announceNextEvent(name) {
+  const announcer = document.getElementById("nextEventAnnouncer");
+  if (!announcer || !name || name === lastAnnouncedEvent) {
+    return;
+  }
+  lastAnnouncedEvent = name;
+  announcer.textContent = `Volgende cue: ${name}`;
+}
+
+function initMobileNav() {
+  const toggle = document.getElementById("navToggle");
+  const nav = document.querySelector(".site-nav");
+  const backdrop = document.getElementById("navBackdrop");
+  const main = document.getElementById("main");
+  if (!toggle || !nav) {
+    return;
+  }
+
+  const setOpen = isOpen => {
+    nav.classList.toggle("site-nav--open", isOpen);
+    toggle.setAttribute("aria-expanded", String(isOpen));
+    toggle.setAttribute("aria-label", isOpen ? "Menu sluiten" : "Menu openen");
+    if (backdrop) {
+      backdrop.hidden = !isOpen;
+    }
+    if (main && "inert" in HTMLElement.prototype) {
+      main.inert = isOpen;
+    }
+  };
+
+  toggle.addEventListener("click", () => {
+    setOpen(!nav.classList.contains("site-nav--open"));
+  });
+
+  nav.addEventListener("click", event => {
+    if (event.target.closest("a")) {
+      setOpen(false);
+    }
+  });
+
+  if (backdrop) {
+    backdrop.addEventListener("click", () => setOpen(false));
+  }
+
+  document.addEventListener("keydown", event => {
+    if (event.key === "Escape" && nav.classList.contains("site-nav--open")) {
+      setOpen(false);
+      toggle.focus();
+    }
+  });
+}
+
+function exportCuesToJson() {
+  const payload = {
+    schema: CUES_EXPORT_SCHEMA,
+    exportedAt: new Date().toISOString(),
+    events: loadCustomEvents()
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `shagwekker-cues-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  showToast("Cues geëxporteerd", { tone: "success" });
+}
+
+function parseImportedCues(text) {
+  const parsed = JSON.parse(text);
+  const rawEvents = Array.isArray(parsed) ? parsed : parsed && parsed.events;
+  if (!Array.isArray(rawEvents)) {
+    throw new Error("Geen geldige cue-lijst gevonden.");
+  }
+  return normalizeCustomEvents(rawEvents);
+}
+
 (function init() {
   const footerYear = document.getElementById("footerYear");
   if (footerYear) {
     footerYear.textContent = new Date().getFullYear();
   }
+
+  initToasts();
+  initMobileNav();
 
   const contrastToggle = document.getElementById("contrastToggle");
   const updateHighContrast = isActive => {
@@ -1530,6 +1684,13 @@ function setEditingState(event) {
     accentControl.value = initialAccent;
     accentControl.addEventListener("input", event => {
       setAccentColor(event.target.value, { persist: true });
+    });
+  }
+
+  const accentReset = document.getElementById("accentReset");
+  if (accentReset) {
+    accentReset.addEventListener("click", () => {
+      resetAccentColor();
     });
   }
 
@@ -1608,6 +1769,7 @@ function setEditingState(event) {
     saveCustomEvents(customEvents);
     setEditingState(null);
     renderAll();
+    showToast("Demo-cues geladen", { tone: "info" });
   });
 
   clearCustom.addEventListener("click", () => {
@@ -1617,8 +1779,51 @@ function setEditingState(event) {
       saveCustomEvents(customEvents);
       setEditingState(null);
       renderAll();
+      showToast("Alle cues verwijderd", { tone: "warning" });
     }
   });
+
+  const exportCues = document.getElementById("exportCues");
+  const importCues = document.getElementById("importCues");
+  const importCuesFile = document.getElementById("importCuesFile");
+
+  if (exportCues) {
+    exportCues.addEventListener("click", exportCuesToJson);
+  }
+
+  if (importCues && importCuesFile) {
+    importCues.addEventListener("click", () => importCuesFile.click());
+    importCuesFile.addEventListener("change", () => {
+      const file = importCuesFile.files && importCuesFile.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const imported = parseImportedCues(String(reader.result));
+          const replace = customEvents.length
+            ? confirm("Bestaande cues vervangen? Kies Annuleren om samen te voegen.")
+            : true;
+          if (replace) {
+            customEvents = imported;
+          } else {
+            customEvents = normalizeCustomEvents([
+              ...customEvents,
+              ...imported.map(evt => ({ ...evt, id: uniqueId() }))
+            ]);
+          }
+          saveCustomEvents(customEvents);
+          setEditingState(null);
+          renderAll();
+          showToast(`${imported.length} cue(s) geïmporteerd`, { tone: "success" });
+        } catch (error) {
+          console.warn("Import mislukt", error);
+          showToast("Import mislukt: ongeldig JSON-bestand", { tone: "warning" });
+        }
+      };
+      reader.readAsText(file);
+      importCuesFile.value = "";
+    });
+  }
 
   customBoard.addEventListener("click", event => {
     const button = event.target.closest("button[data-action]");
@@ -1632,6 +1837,7 @@ function setEditingState(event) {
       saveCustomEvents(customEvents);
       setEditingState(null);
       renderAll();
+      showToast("Cue verwijderd", { tone: "info" });
     }
     if (action === "edit") {
       const targetEvent = customEvents.find(evt => evt.id === id);
@@ -1656,7 +1862,7 @@ function setEditingState(event) {
     const notes = formData.get("notes").toString().trim();
 
     if (!/^\d{2}:\d{2}$/.test(time)) {
-      alert("Please provide a valid time in HH:MM format.");
+      showToast("Geef een geldige tijd op (HH:MM)", { tone: "warning" });
       return;
     }
 
@@ -1674,6 +1880,7 @@ function setEditingState(event) {
     renderAll();
     createEventForm.reset();
     setEditingState(null);
+    showToast(id ? "Cue bijgewerkt" : "Cue opgeslagen", { tone: "success" });
   });
 
   setInterval(() => {
