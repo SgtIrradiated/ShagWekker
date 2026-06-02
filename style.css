@@ -2,8 +2,8 @@
   color-scheme: dark;
   --bg-1: #050914;
   --bg-2: #0c1430;
-  --surface: rgba(18, 26, 51, 0.72);
-  --surface-strong: rgba(20, 30, 62, 0.88);
+  --surface: rgba(18, 26, 51, 0.55);
+  --surface-strong: rgba(20, 30, 62, 0.72);
   --ink: #f2f5ff;
   --muted: #aab3de;
   --accent: #ff0000;
@@ -13,8 +13,14 @@
   --radius-lg: 28px;
   --radius-md: 18px;
   --radius-sm: 12px;
-  --shadow-xl: 0 30px 70px rgba(0, 0, 0, 0.45);
-  --shadow-md: 0 16px 40px rgba(5, 10, 30, 0.35);
+  /* Glass effect tokens */
+  --glass-blur: blur(22px) saturate(150%);
+  --glass-blur-strong: blur(30px) saturate(160%);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.12);
+  --glass-rim: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --glass-sheen: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 42%);
+  --shadow-xl: 0 30px 70px rgba(0, 0, 0, 0.45), var(--glass-rim);
+  --shadow-md: 0 16px 40px rgba(5, 10, 30, 0.35), var(--glass-rim);
   --transition: 200ms ease;
   --grid-gap: clamp(1rem, 2vw, 1.8rem);
 }
@@ -23,26 +29,32 @@
   color-scheme: light;
   --bg-1: #eef1fb;
   --bg-2: #dde3f5;
-  --surface: rgba(255, 255, 255, 0.78);
-  --surface-strong: rgba(255, 255, 255, 0.92);
+  --surface: rgba(255, 255, 255, 0.6);
+  --surface-strong: rgba(255, 255, 255, 0.78);
   --ink: #161b2e;
   --muted: #51597a;
   --ring: rgba(60, 110, 220, 0.45);
-  --shadow-xl: 0 30px 70px rgba(40, 60, 120, 0.18);
-  --shadow-md: 0 16px 40px rgba(40, 60, 120, 0.14);
+  --glass-border: 1px solid rgba(255, 255, 255, 0.6);
+  --glass-rim: inset 0 1px 0 rgba(255, 255, 255, 0.6), inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+  --glass-sheen: linear-gradient(160deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 45%);
+  --shadow-xl: 0 30px 70px rgba(40, 60, 120, 0.18), var(--glass-rim);
+  --shadow-md: 0 16px 40px rgba(40, 60, 120, 0.14), var(--glass-rim);
 }
 
 :root[data-theme="sepia"] {
   color-scheme: light;
   --bg-1: #efe2cc;
   --bg-2: #e3d2b3;
-  --surface: rgba(255, 248, 236, 0.82);
-  --surface-strong: rgba(255, 250, 240, 0.94);
+  --surface: rgba(255, 248, 236, 0.62);
+  --surface-strong: rgba(255, 250, 240, 0.8);
   --ink: #3a2c1a;
   --muted: #7a6750;
   --ring: rgba(150, 110, 60, 0.45);
-  --shadow-xl: 0 30px 70px rgba(90, 70, 40, 0.2);
-  --shadow-md: 0 16px 40px rgba(90, 70, 40, 0.16);
+  --glass-border: 1px solid rgba(255, 245, 230, 0.6);
+  --glass-rim: inset 0 1px 0 rgba(255, 250, 240, 0.6), inset 0 0 0 1px rgba(255, 245, 230, 0.22);
+  --glass-sheen: linear-gradient(160deg, rgba(255, 250, 240, 0.5), rgba(255, 250, 240, 0) 45%);
+  --shadow-xl: 0 30px 70px rgba(90, 70, 40, 0.2), var(--glass-rim);
+  --shadow-md: 0 16px 40px rgba(90, 70, 40, 0.16), var(--glass-rim);
 }
 
 .status-card__theme {
@@ -90,7 +102,44 @@ body.high-contrast {
   --surface: rgba(15, 21, 44, 0.95);
   --surface-strong: rgba(5, 9, 25, 0.95);
   --muted: #ffffff;
+  /* Keep panels crisp and readable in high-contrast mode */
+  --glass-blur: none;
+  --glass-blur-strong: none;
+  --glass-sheen: none;
   background: #01030a;
+}
+
+/* Shared glassmorphism: frosted backdrop blur across the main surfaces */
+.hero__media,
+.meter-card,
+.status-card,
+.planner__primary,
+.planner__sidebar,
+.customize__form,
+.customize__board,
+.event-card,
+.shagmeter-embed,
+.gallery-preview__figure,
+.soundboard__pad,
+.toast {
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+}
+
+/* Fallback: if the browser can't frost the backdrop, keep panels opaque enough to read */
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  :root {
+    --surface: rgba(18, 26, 51, 0.92);
+    --surface-strong: rgba(20, 30, 62, 0.96);
+  }
+  :root[data-theme="light"] {
+    --surface: rgba(255, 255, 255, 0.92);
+    --surface-strong: rgba(255, 255, 255, 0.97);
+  }
+  :root[data-theme="sepia"] {
+    --surface: rgba(255, 248, 236, 0.93);
+    --surface-strong: rgba(255, 250, 240, 0.97);
+  }
 }
 
 .page {
@@ -115,8 +164,9 @@ main {
   align-items: center;
   justify-content: space-between;
   padding: 1rem clamp(1.5rem, 4vw, 3.5rem);
-  background: rgba(5, 10, 25, 0.72);
-  backdrop-filter: blur(16px);
+  background: rgba(5, 10, 25, 0.55);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  backdrop-filter: var(--glass-blur-strong);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
@@ -139,7 +189,10 @@ main {
   width: 52px;
   height: 52px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.06);
+  border: var(--glass-border);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-md);
 }
 
@@ -757,6 +810,9 @@ main {
   padding: 0.65rem;
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
 }
 
 .status-card__swatch input[type="color"] {
@@ -1339,7 +1395,9 @@ textarea {
   padding: 0.65rem 0.75rem;
   border-radius: var(--radius-sm);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   color: inherit;
   transition: border-color var(--transition), box-shadow var(--transition);
 }
