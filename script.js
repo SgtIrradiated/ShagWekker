@@ -597,7 +597,7 @@ function initAudioPlayer() {
   };
 
   /* ── Live Web Audio visualizer ────────────────────────────── */
-  const viz = { ctx: null, analyser: null, data: null, raf: 0, bars: [], failed: false };
+  const viz = { ctx: null, source: null, analyser: null, data: null, raf: 0, bars: [], failed: false };
   if (els.waveform) {
     viz.bars = Array.from(els.waveform.querySelectorAll("span"));
   }
@@ -611,20 +611,43 @@ function initAudioPlayer() {
       viz.failed = true;
       return;
     }
+    // Creating the MediaElementSource reroutes the element's output into the graph: from this
+    // point on, the track only sounds if the graph reaches ctx.destination. So we build it in
+    // two guarded steps — if anything past the reroute fails, we still wire the source straight
+    // to the speakers instead of leaving the audio trapped in a dead graph (total silence).
+    let ctx;
+    let source;
     try {
-      viz.ctx = new Ctx();
-      const source = viz.ctx.createMediaElementSource(audio);
-      viz.analyser = viz.ctx.createAnalyser();
-      viz.analyser.fftSize = AUDIO_VISUALIZER_FFT;
-      viz.analyser.smoothingTimeConstant = 0.8;
-      viz.data = new Uint8Array(viz.analyser.frequencyBinCount);
-      source.connect(viz.analyser);
-      viz.analyser.connect(viz.ctx.destination);
-      els.waveform.classList.add("audio-player__waveform--live");
+      ctx = new Ctx();
+      source = ctx.createMediaElementSource(audio);
     } catch (error) {
+      // The element was never rerouted, so plain <audio> playback keeps working untouched.
       console.warn("Visualizer niet beschikbaar, val terug op animatie", error);
       viz.failed = true;
       viz.ctx = null;
+      return;
+    }
+    viz.ctx = ctx;
+    viz.source = source;
+    try {
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = AUDIO_VISUALIZER_FFT;
+      analyser.smoothingTimeConstant = 0.8;
+      source.connect(analyser);
+      analyser.connect(ctx.destination);
+      viz.analyser = analyser;
+      viz.data = new Uint8Array(analyser.frequencyBinCount);
+      els.waveform.classList.add("audio-player__waveform--live");
+    } catch (error) {
+      // Meter graph failed after the reroute — guarantee sound by bypassing the analyser.
+      console.warn("Visualizer niet beschikbaar, val terug op animatie", error);
+      viz.analyser = null;
+      viz.failed = true;
+      try {
+        source.connect(ctx.destination);
+      } catch (connectError) {
+        console.warn("Kon audioroute niet herstellen", connectError);
+      }
     }
   };
 
