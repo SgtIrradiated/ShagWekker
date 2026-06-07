@@ -324,6 +324,7 @@ function initAudioPlayer() {
     mute: playerEl.querySelector("[data-audio-mute]"),
     download: playerEl.querySelector("[data-audio-download]"),
     progress: playerEl.querySelector("[data-audio-progress]"),
+    progressTrack: playerEl.querySelector(".audio-player__progress-track"),
     current: playerEl.querySelector("[data-audio-current]"),
     total: playerEl.querySelector("[data-audio-total]"),
     volume: playerEl.querySelector("[data-audio-volume]"),
@@ -501,13 +502,27 @@ function initAudioPlayer() {
 
   /* ── Progress / time ──────────────────────────────────────── */
   const setProgressVisual = ratio => {
-    els.progress.style.setProperty("--audio-progress", `${(ratio * 100).toFixed(2)}%`);
+    const pct = `${(Math.max(0, Math.min(1, ratio)) * 100).toFixed(2)}%`;
+    els.progressTrack?.style.setProperty("--audio-progress", pct);
+  };
+
+  const renderBuffered = () => {
+    if (!els.progressTrack) {
+      return;
+    }
+    let ratio = 0;
+    if (Number.isFinite(audio.duration) && audio.duration > 0 && audio.buffered.length) {
+      ratio = Math.max(0, Math.min(1, audio.buffered.end(audio.buffered.length - 1) / audio.duration));
+    }
+    els.progressTrack.style.setProperty("--audio-buffered", `${(ratio * 100).toFixed(2)}%`);
   };
 
   const resetProgress = () => {
     els.progress.value = "0";
     els.progress.disabled = true;
+    els.progressTrack?.classList.remove("is-seeking");
     setProgressVisual(0);
+    els.progressTrack?.style.setProperty("--audio-buffered", "0%");
     els.current.textContent = "0:00";
     els.total.textContent = "0:00";
   };
@@ -520,6 +535,7 @@ function initAudioPlayer() {
     const ratio = ended ? 1 : Math.max(0, Math.min(1, audio.currentTime / audio.duration));
     els.progress.value = String(Math.round(ratio * AUDIO_PROGRESS_STEPS));
     setProgressVisual(ratio);
+    renderBuffered();
     els.current.textContent = formatAudioTime(ended ? audio.duration : audio.currentTime);
     els.total.textContent = formatAudioTime(audio.duration);
   };
@@ -581,7 +597,7 @@ function initAudioPlayer() {
   };
 
   /* ── Live Web Audio visualizer ────────────────────────────── */
-  const viz = { ctx: null, analyser: null, data: null, raf: 0, bars: [], failed: false };
+  const viz = { ctx: null, source: null, analyser: null, data: null, raf: 0, bars: [], failed: false };
   if (els.waveform) {
     viz.bars = Array.from(els.waveform.querySelectorAll("span"));
   }
@@ -595,20 +611,43 @@ function initAudioPlayer() {
       viz.failed = true;
       return;
     }
+    // Creating the MediaElementSource reroutes the element's output into the graph: from this
+    // point on, the track only sounds if the graph reaches ctx.destination. So we build it in
+    // two guarded steps — if anything past the reroute fails, we still wire the source straight
+    // to the speakers instead of leaving the audio trapped in a dead graph (total silence).
+    let ctx;
+    let source;
     try {
-      viz.ctx = new Ctx();
-      const source = viz.ctx.createMediaElementSource(audio);
-      viz.analyser = viz.ctx.createAnalyser();
-      viz.analyser.fftSize = AUDIO_VISUALIZER_FFT;
-      viz.analyser.smoothingTimeConstant = 0.8;
-      viz.data = new Uint8Array(viz.analyser.frequencyBinCount);
-      source.connect(viz.analyser);
-      viz.analyser.connect(viz.ctx.destination);
-      els.waveform.classList.add("audio-player__waveform--live");
+      ctx = new Ctx();
+      source = ctx.createMediaElementSource(audio);
     } catch (error) {
+      // The element was never rerouted, so plain <audio> playback keeps working untouched.
       console.warn("Visualizer niet beschikbaar, val terug op animatie", error);
       viz.failed = true;
       viz.ctx = null;
+      return;
+    }
+    viz.ctx = ctx;
+    viz.source = source;
+    try {
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = AUDIO_VISUALIZER_FFT;
+      analyser.smoothingTimeConstant = 0.8;
+      source.connect(analyser);
+      analyser.connect(ctx.destination);
+      viz.analyser = analyser;
+      viz.data = new Uint8Array(analyser.frequencyBinCount);
+      els.waveform.classList.add("audio-player__waveform--live");
+    } catch (error) {
+      // Meter graph failed after the reroute — guarantee sound by bypassing the analyser.
+      console.warn("Visualizer niet beschikbaar, val terug op animatie", error);
+      viz.analyser = null;
+      viz.failed = true;
+      try {
+        source.connect(ctx.destination);
+      } catch (connectError) {
+        console.warn("Kon audioroute niet herstellen", connectError);
+      }
     }
   };
 
@@ -855,12 +894,14 @@ function initAudioPlayer() {
       return;
     }
     state.seeking = true;
+    els.progressTrack?.classList.add("is-seeking");
     const ratio = Number(els.progress.value) / AUDIO_PROGRESS_STEPS;
     els.current.textContent = formatAudioTime(ratio * audio.duration);
     setProgressVisual(ratio);
   });
 
   const endSeek = () => {
+    els.progressTrack?.classList.remove("is-seeking");
     if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
       state.seeking = false;
       return;
@@ -883,6 +924,8 @@ function initAudioPlayer() {
     state.pendingSeek = 0;
     renderProgress();
   });
+
+  audio.addEventListener("progress", renderBuffered);
 
   audio.addEventListener("timeupdate", () => {
     if (state.seeking) {

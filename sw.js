@@ -1,4 +1,4 @@
-const CACHE_NAME = "shagwekker-v3";
+const CACHE_NAME = "shagwekker-v5";
 const SHELL = [
   "/",
   "/index.html",
