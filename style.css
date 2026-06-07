@@ -484,16 +484,44 @@ main {
 .shagmeter__goal-control {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
-.shagmeter__goal-control input[type="range"] {
-  flex: 1;
-  accent-color: var(--accent);
+.shagmeter__goal-number {
+  width: 5.5rem;
+  padding: 0.45rem 0.8rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  text-align: center;
+  font-family: inherit;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 200ms ease, box-shadow 200ms ease, background 200ms ease;
+  -moz-appearance: textfield;
+  appearance: textfield;
 }
 
-.shagmeter__goal-value {
+.shagmeter__goal-number::-webkit-outer-spin-button,
+.shagmeter__goal-number::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.shagmeter__goal-number:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.shagmeter__goal-unit {
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 
 .shagmeter__display {

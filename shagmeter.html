@@ -95,15 +95,18 @@
               <div class="shagmeter__goal-control">
                 <input
                   id="shagmeterGoal"
-                  type="range"
+                  class="shagmeter__goal-number"
+                  type="number"
                   min="1"
-                  max="20"
+                  max="9999"
                   step="1"
                   value="8"
+                  inputmode="numeric"
+                  autocomplete="off"
                   data-shagmeter-goal
                   aria-label="Dagelijkse shag goal"
                 />
-                <span class="shagmeter__goal-value" data-shagmeter-goal-value>8 Shaggies</span>
+                <span class="shagmeter__goal-unit" data-shagmeter-goal-value>Shaggies</span>
               </div>
             </div>
 
