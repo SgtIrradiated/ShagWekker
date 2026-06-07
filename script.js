@@ -324,6 +324,7 @@ function initAudioPlayer() {
     mute: playerEl.querySelector("[data-audio-mute]"),
     download: playerEl.querySelector("[data-audio-download]"),
     progress: playerEl.querySelector("[data-audio-progress]"),
+    progressTrack: playerEl.querySelector(".audio-player__progress-track"),
     current: playerEl.querySelector("[data-audio-current]"),
     total: playerEl.querySelector("[data-audio-total]"),
     volume: playerEl.querySelector("[data-audio-volume]"),
@@ -501,13 +502,27 @@ function initAudioPlayer() {
 
   /* ── Progress / time ──────────────────────────────────────── */
   const setProgressVisual = ratio => {
-    els.progress.style.setProperty("--audio-progress", `${(ratio * 100).toFixed(2)}%`);
+    const pct = `${(Math.max(0, Math.min(1, ratio)) * 100).toFixed(2)}%`;
+    els.progressTrack?.style.setProperty("--audio-progress", pct);
+  };
+
+  const renderBuffered = () => {
+    if (!els.progressTrack) {
+      return;
+    }
+    let ratio = 0;
+    if (Number.isFinite(audio.duration) && audio.duration > 0 && audio.buffered.length) {
+      ratio = Math.max(0, Math.min(1, audio.buffered.end(audio.buffered.length - 1) / audio.duration));
+    }
+    els.progressTrack.style.setProperty("--audio-buffered", `${(ratio * 100).toFixed(2)}%`);
   };
 
   const resetProgress = () => {
     els.progress.value = "0";
     els.progress.disabled = true;
+    els.progressTrack?.classList.remove("is-seeking");
     setProgressVisual(0);
+    els.progressTrack?.style.setProperty("--audio-buffered", "0%");
     els.current.textContent = "0:00";
     els.total.textContent = "0:00";
   };
@@ -520,6 +535,7 @@ function initAudioPlayer() {
     const ratio = ended ? 1 : Math.max(0, Math.min(1, audio.currentTime / audio.duration));
     els.progress.value = String(Math.round(ratio * AUDIO_PROGRESS_STEPS));
     setProgressVisual(ratio);
+    renderBuffered();
     els.current.textContent = formatAudioTime(ended ? audio.duration : audio.currentTime);
     els.total.textContent = formatAudioTime(audio.duration);
   };
@@ -855,12 +871,14 @@ function initAudioPlayer() {
       return;
     }
     state.seeking = true;
+    els.progressTrack?.classList.add("is-seeking");
     const ratio = Number(els.progress.value) / AUDIO_PROGRESS_STEPS;
     els.current.textContent = formatAudioTime(ratio * audio.duration);
     setProgressVisual(ratio);
   });
 
   const endSeek = () => {
+    els.progressTrack?.classList.remove("is-seeking");
     if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
       state.seeking = false;
       return;
@@ -883,6 +901,8 @@ function initAudioPlayer() {
     state.pendingSeek = 0;
     renderProgress();
   });
+
+  audio.addEventListener("progress", renderBuffered);
 
   audio.addEventListener("timeupdate", () => {
     if (state.seeking) {
