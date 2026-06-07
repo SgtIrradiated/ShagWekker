@@ -120,7 +120,6 @@ body.high-contrast {
 .event-card,
 .shagmeter-embed,
 .gallery-preview__figure,
-.soundboard__pad,
 .toast {
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
@@ -174,15 +173,6 @@ main {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  cursor: pointer;
-}
-
-.brand--bombo-hint {
-  animation: brand-bombo-hint 0.5s ease;
-}
-
-.brand--bombo-hint .brand__mark {
-  animation: brand-bombo-glow 0.5s ease;
 }
 
 .brand__mark {
@@ -194,41 +184,6 @@ main {
   -webkit-backdrop-filter: var(--glass-blur);
   backdrop-filter: var(--glass-blur);
   box-shadow: var(--shadow-md);
-}
-
-.brand--bombo-hint .brand__mark,
-.brand--bombo-hint {
-  will-change: transform, box-shadow;
-}
-
-@keyframes brand-bombo-hint {
-  0% {
-    transform: scale(1) rotate(0deg);
-  }
-  30% {
-    transform: scale(1.08) rotate(-2deg);
-  }
-  55% {
-    transform: scale(0.95) rotate(2deg);
-  }
-  100% {
-    transform: scale(1) rotate(0deg);
-  }
-}
-
-@keyframes brand-bombo-glow {
-  0% {
-    box-shadow: var(--shadow-md);
-  }
-  35% {
-    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.2), 0 0 18px 6px var(--accent);
-  }
-  70% {
-    box-shadow: 0 0 0 12px rgba(255, 255, 255, 0.12), 0 0 14px 4px var(--accent);
-  }
-  100% {
-    box-shadow: var(--shadow-md);
-  }
 }
 
 .brand__text {
@@ -2812,6 +2767,12 @@ button {
     border-radius: 18px;
   }
 
+  .audio-player__control[data-audio-play] {
+    width: 64px;
+    height: 64px;
+    border-radius: 22px;
+  }
+
   .audio-player__control--ghost {
     flex: 1 0 100%;
     justify-content: center;
@@ -3053,7 +3014,7 @@ button {
   accent-color: var(--accent);
 }
 
-/* ── Phase C: shagmeter embed, soundboard, gallery strip, easter-egg hint ── */
+/* ── Phase C: shagmeter embed, gallery strip ── */
 .shagmeter-embed {
   margin-top: var(--grid-gap);
   background: var(--surface);
@@ -3092,37 +3053,6 @@ button {
   margin: 0;
 }
 
-.soundboard {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.75rem;
-  margin-top: clamp(1.5rem, 3vw, 2.4rem);
-}
-
-.soundboard__pad {
-  padding: 1.1rem 1rem;
-  border-radius: var(--radius-md);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, rgba(255, 255, 255, 0.05)), rgba(255, 255, 255, 0.02));
-  color: inherit;
-  font-weight: 700;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
-}
-
-.soundboard__pad:hover,
-.soundboard__pad:focus-visible {
-  transform: translateY(-2px);
-  border-color: var(--accent);
-}
-
-.soundboard__pad--active {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent);
-  transform: scale(0.97);
-}
-
 .gallery-preview {
   margin-top: var(--grid-gap);
 }
@@ -3153,39 +3083,149 @@ button {
   object-fit: cover;
 }
 
-.audio-player__control--toggle.is-active {
-  color: var(--accent);
-  border-color: var(--accent);
+/* ── Audio player: tactile controls & states ── */
+.audio-player__control:active {
+  transform: scale(0.92);
 }
 
-.brand--hint .brand__mark {
-  animation: brand-hint-pulse 1.6s ease-in-out infinite;
+.audio-player__control:disabled,
+.audio-player__control[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none;
 }
 
-.brand {
+/* Primary play button stands apart with an accent fill and glow */
+.audio-player__control[data-audio-play] {
   position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 24px;
+  border-color: color-mix(in srgb, var(--accent) 55%, rgba(255, 255, 255, 0.25));
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.35), transparent 60%),
+    linear-gradient(150deg, color-mix(in srgb, var(--accent) 85%, #fff 0%), color-mix(in srgb, var(--accent) 55%, #050a1a));
+  box-shadow:
+    0 22px 48px color-mix(in srgb, var(--accent) 45%, rgba(4, 10, 26, 0.5)),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  color: #fff;
 }
 
-.brand__hint-dot {
+.audio-player__control[data-audio-play] .audio-player__icon {
+  width: 30px;
+  height: 30px;
+}
+
+.audio-player.is-playing .audio-player__control[data-audio-play]::after {
+  content: "";
   position: absolute;
-  top: -2px;
-  left: 44px;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent);
-  animation: brand-hint-pulse 1.6s ease-in-out infinite;
+  inset: -6px;
+  border-radius: inherit;
+  border: 2px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  animation: audioPlayPulse 2.4s ease-in-out infinite;
+  pointer-events: none;
 }
 
-@keyframes brand-hint-pulse {
-  0%, 100% {
+@keyframes audioPlayPulse {
+  0%,
+  100% {
     transform: scale(1);
-    opacity: 0.85;
+    opacity: 0.6;
   }
   50% {
     transform: scale(1.12);
-    opacity: 1;
+    opacity: 0;
+  }
+}
+
+/* Toggle buttons (shuffle / repeat) get a filled accent state when active */
+.audio-player__control--toggle.is-active {
+  color: #fff;
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 70%, transparent), color-mix(in srgb, var(--accent) 30%, transparent));
+  box-shadow:
+    0 14px 32px color-mix(in srgb, var(--accent) 35%, rgba(4, 10, 26, 0.4)),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+/* Repeat "1" badge only shows in repeat-one mode */
+.audio-player__repeat-one {
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.audio-player__control--repeat.is-one .audio-player__repeat-one {
+  opacity: 1;
+}
+
+/* Mute toggle button replaces the inert volume icon */
+.audio-player__volume-toggle {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition), color var(--transition), background var(--transition);
+}
+
+.audio-player__volume-toggle:hover {
+  color: var(--ink);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.audio-player__volume-toggle:active {
+  transform: scale(0.9);
+}
+
+.audio-player__volume-toggle:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.audio-player__volume-toggle.is-active {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.audio-player__volume-icon--off {
+  display: none;
+}
+
+.audio-player__volume-toggle.is-active .audio-player__volume-icon--on {
+  display: none;
+}
+
+.audio-player__volume-toggle.is-active .audio-player__volume-icon--off {
+  display: block;
+}
+
+/* When muted, fade the volume fill so the state reads at a glance */
+.audio-player.is-muted .audio-player__volume-box {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+
+/* Live Web Audio visualizer: JS drives bar heights, so silence the CSS keyframes */
+.audio-player__waveform--live span {
+  height: 8%;
+  opacity: 0.9;
+  transition: height 90ms linear;
+}
+
+.audio-player.is-playing .audio-player__waveform--live span {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .audio-player.is-playing .audio-player__control[data-audio-play]::after {
+    animation: none;
   }
 }
 

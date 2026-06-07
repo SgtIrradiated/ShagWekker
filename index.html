@@ -434,6 +434,15 @@
                       <polyline points="17.5,14 20,17 17.5,20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                     </svg>
                   </button>
+                  <button class="audio-player__control audio-player__control--toggle audio-player__control--repeat" type="button" data-audio-repeat data-mode="off" aria-pressed="false" aria-label="Herhaal: uit">
+                    <svg class="audio-player__icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M7 7h9a3 3 0 0 1 3 3v1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      <polyline points="9.5,4.5 7,7 9.5,9.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      <path d="M17 17H8a3 3 0 0 1-3-3v-1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      <polyline points="14.5,19.5 17,17 14.5,14.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                      <text class="audio-player__repeat-one" x="12" y="13.5" text-anchor="middle" font-size="7" font-weight="700" fill="currentColor">1</text>
+                    </svg>
+                  </button>
                   <a
                     class="audio-player__control audio-player__control--ghost"
                     data-audio-download
@@ -467,17 +476,31 @@
                   <span class="audio-player__time audio-player__time--total" data-audio-total>0:00</span>
                 </div>
                 <div class="audio-player__volume">
-                  <svg class="audio-player__volume-icon" viewBox="0 0 24 24" aria-hidden="true">
-                    <path
-                      d="M5.5 9.5a1 1 0 0 1 1-1H9l2.9-2.32A1 1 0 0 1 13 7v10a1 1 0 0 1-1.58.81L9 15.5H6.5a1 1 0 0 1-1-1Z"
-                    />
-                    <path
-                      d="M16.5 8.5a1 1 0 0 0-1.41 1.42 2.5 2.5 0 0 1 0 3.54A1 1 0 1 0 16.5 14.9a4.5 4.5 0 0 0 0-6.4Z"
-                    />
-                    <path
-                      d="M18.91 6.09a1 1 0 0 0-1.42 1.42 5.5 5.5 0 0 1 0 7.78 1 1 0 0 0 1.42 1.42 7.5 7.5 0 0 0 0-10.62Z"
-                    />
-                  </svg>
+                  <button class="audio-player__volume-toggle" type="button" data-audio-mute aria-pressed="false" aria-label="Dempen">
+                    <svg class="audio-player__volume-icon audio-player__volume-icon--on" viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M5.5 9.5a1 1 0 0 1 1-1H9l2.9-2.32A1 1 0 0 1 13 7v10a1 1 0 0 1-1.58.81L9 15.5H6.5a1 1 0 0 1-1-1Z"
+                      />
+                      <path
+                        d="M16.5 8.5a1 1 0 0 0-1.41 1.42 2.5 2.5 0 0 1 0 3.54A1 1 0 1 0 16.5 14.9a4.5 4.5 0 0 0 0-6.4Z"
+                      />
+                      <path
+                        d="M18.91 6.09a1 1 0 0 0-1.42 1.42 5.5 5.5 0 0 1 0 7.78 1 1 0 0 0 1.42 1.42 7.5 7.5 0 0 0 0-10.62Z"
+                      />
+                    </svg>
+                    <svg class="audio-player__volume-icon audio-player__volume-icon--off" viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M5.5 9.5a1 1 0 0 1 1-1H9l2.9-2.32A1 1 0 0 1 13 7v10a1 1 0 0 1-1.58.81L9 15.5H6.5a1 1 0 0 1-1-1Z"
+                      />
+                      <path
+                        d="M16 9.5l5 5m0-5l-5 5"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
+                    </svg>
+                  </button>
                   <div class="audio-player__volume-box">
                     <input
                       class="audio-player__volume-slider"
@@ -495,22 +518,6 @@
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section class="soundboard-section" id="soundboard">
-        <header class="section-header">
-          <div>
-            <p class="section-header__eyebrow">Snelle shag-sfx</p>
-            <h2>Soundboard.</h2>
-          </div>
-          <p class="section-header__hint">Druk op een pad voor een korte clip — onafhankelijk van de speler hierboven.</p>
-        </header>
-        <div class="soundboard" id="soundboardGrid">
-          <button class="soundboard__pad" type="button" data-audio-src="audio/blyat.mp3">Blyat</button>
-          <button class="soundboard__pad" type="button" data-audio-src="audio/bankametaal.mp3">Banka</button>
-          <button class="soundboard__pad" type="button" data-audio-src="audio/nicotinerzshy.mp3">Trump</button>
-          <button class="soundboard__pad" type="button" data-audio-src="audio/audio.mp3">Blije Man</button>
         </div>
       </section>
 

@@ -20,13 +20,13 @@ There are no lint/test/build commands. "Testing" is manual: load the relevant pa
 
 ### One shared script, page-guarded modules
 
-Every HTML page loads the **same** `script.js`. There is no router and no per-page bundle. Instead, the file defines many `initX()` functions; each one looks up its anchor element (e.g. `document.getElementById("soundboardGrid")`, `document.querySelector("[data-audio-player]")`) and **returns early if that element is absent**. A single IIFE `init()` at the bottom of `script.js` calls every `initX()` unconditionally — page differentiation happens entirely through which elements exist in each page's markup. When adding a feature, follow this pattern: write an `initFeature()` that bails when its root element is missing, then add one call inside the bottom `init()`.
+Every HTML page loads the **same** `script.js`. There is no router and no per-page bundle. Instead, the file defines many `initX()` functions; each one looks up its anchor element (e.g. `document.querySelector("[data-audio-player]")`, `document.getElementById("timelineList")`) and **returns early if that element is absent**. A single IIFE `init()` at the bottom of `script.js` calls every `initX()` unconditionally — page differentiation happens entirely through which elements exist in each page's markup. When adding a feature, follow this pattern: write an `initFeature()` that bails when its root element is missing, then add one call inside the bottom `init()`.
 
 Two pages (`gallery.html`, `het-archief.html`) have small **inline** IIFEs (`initGallery`, `initArchive`) instead of living in `script.js`, because their content is page-local.
 
 ### Pages
 
-- `index.html` — the main wekker: countdown timeline, custom-cue CRUD form, audio player, soundboard, ShagMeter, theming, onboarding.
+- `index.html` — the main wekker: countdown timeline, custom-cue CRUD form, audio player, ShagMeter, theming, onboarding.
 - `shagmeter.html` — standalone ShagMeter tracker view.
 - `library.html` — resource/download library.
 - `gallery.html` — image gallery (inline script).
@@ -47,6 +47,7 @@ Recurrence is handled by `nextOccurrenceFor(event, now)` switching on `event.rec
 All `localStorage` keys are namespaced `shagwekker.*` and **version-suffixed** (`.vN`) so the schema can evolve without colliding:
 - `shagwekker.customEvents.v1` (`STORAGE_KEY`) — custom events; `multiCountdown.times` (`LEGACY_KEY`) is migrated in.
 - `shagwekker.shagmeter.state.v1` — ShagMeter state.
+- `shagwekker.audio.state.v1` (`AUDIO_STATE_KEY`) — audio player session (track index, position, volume, mute, shuffle, repeat); migrates the legacy `shagwekker.audio.shuffle.v1` key.
 - `shagwekker.preferences.*` — high-contrast and accent-color prefs.
 
 A `storage` event listener keeps multiple open tabs in sync. When changing a persisted shape, bump the version suffix and handle migration from the old key rather than mutating in place.
@@ -57,13 +58,16 @@ App-shell caching with a versioned `CACHE_NAME` (`shagwekker-vN`). The `SHELL` a
 
 **Whenever you change a shell asset (`index.html`, `style.css`, `script.js`, manifest, shell icons), bump `CACHE_NAME`** — otherwise returning users keep the stale cached copy. Add genuinely new shell files to the `SHELL` array.
 
-### Theming & easter egg
+### Theming
 
-Accent color is a single CSS custom property driven by `setAccentColor()` / `resetAccentColor()` (default `#ff0000`), persisted per the preference keys above. `initThemeSwitcher()` resolves light/dark/system. A hidden **"BomboClock"** easter egg (`initBomboClockEasterEgg`) triggers after 3 clicks and text-replaces "Shag"→"Jonko" etc. via `BOMBOCLOCK_REPLACEMENTS` — be aware these regex replacements run over rendered text when editing copy.
+Accent color is a single CSS custom property driven by `setAccentColor()` / `resetAccentColor()` (default `#ff0000`), persisted per the preference keys above. The accent flows into the audio player, timeline, and other accent-tinted surfaces. `initThemeSwitcher()` resolves light/dark/system.
 
-### Audio
+### Audio player (`initAudioPlayer`)
 
-`STATIC_AUDIO_REFERENCES` near the top of `script.js` is the curated playlist (the player does not scan the directory). Allowed extensions are gated by `AUDIO_EXTENSIONS` / `isAllowedAudioFile()`. To add a track, drop the file in `audio/` and add an entry to `STATIC_AUDIO_REFERENCES`.
+`STATIC_AUDIO_REFERENCES` near the top of `script.js` is the curated playlist (the player does not scan the directory); allowed extensions are gated by `AUDIO_EXTENSIONS` / `isAllowedAudioFile()`. To add a track, drop the file in `audio/` and add an entry. The player is a self-contained module driven by a single `state` object and pure `renderX()` helpers, with: a `<select>` track picker, transport (play/pause/stop/prev/next), **shuffle + repeat** (off/all/one), seek, volume + **mute**, and download. Three integrations worth knowing:
+- **Live visualizer** — lazily builds a Web Audio `AnalyserNode` on first play (autoplay-policy safe) that drives the 24 `.audio-player__waveform span` bars; falls back to the CSS animation when `prefers-reduced-motion` or Web Audio is unavailable. Note `createMediaElementSource(audio)` reroutes element output through the graph, so the `AudioContext` must be `resume()`d on the play gesture.
+- **Session resume** — `shagwekker.audio.state.v1` (see persistence conventions); restores track/position/volume/modes on load but never auto-plays.
+- **Media Session API** — lock-screen / OS media-key metadata and handlers, guarded for unsupported browsers.
 
 ## Conventions
 
