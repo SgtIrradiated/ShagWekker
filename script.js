@@ -1584,15 +1584,15 @@ function initShagMeter() {
   renderTimelineCard();
   setInterval(renderTimelineCard, 1000);
 
-  const sliderMin = Number(goalInput.min) || 1;
-  const sliderMax = Number(goalInput.max) || 20;
+  const goalMin = Number(goalInput.min) || 1;
+  const goalMax = Number(goalInput.max) || 9999;
 
   const clampGoal = value => {
     const numeric = Number(value);
     if (!Number.isFinite(numeric) || numeric <= 0) {
-      return sliderMin;
+      return goalMin;
     }
-    return Math.min(sliderMax, Math.max(sliderMin, Math.round(numeric)));
+    return Math.min(goalMax, Math.max(goalMin, Math.round(numeric)));
   };
 
   const shagUnit = amount => {
@@ -1641,7 +1641,7 @@ function initShagMeter() {
     }
   };
 
-  const defaultGoal = clampGoal(goalInput.value || sliderMin);
+  const defaultGoal = clampGoal(goalInput.value || goalMin);
   let state = loadState() || { goal: defaultGoal, count: 0 };
 
   let lastCompletionState = state.count >= state.goal && state.goal > 0;
@@ -1654,7 +1654,7 @@ function initShagMeter() {
   }
 
   const updateGoalValue = () => {
-    goalValueEl.textContent = pluralizeShag(state.goal);
+    goalValueEl.textContent = shagUnit(state.goal);
   };
 
   const stopExplosion = () => {
@@ -1736,8 +1736,23 @@ function initShagMeter() {
   updateMeter();
 
   goalInput.addEventListener("input", event => {
-    state.goal = clampGoal(event.target.value);
-    goalInput.value = state.goal;
+    const raw = event.target.value;
+    if (raw === "" || raw === "-") return;
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed < 1) return;
+    state.goal = clampGoal(raw);
+    if (state.count > state.goal) {
+      state.count = state.goal;
+    }
+    updateGoalValue();
+    updateMeter();
+    persistState(state);
+  });
+
+  goalInput.addEventListener("change", event => {
+    const clamped = clampGoal(event.target.value || state.goal);
+    state.goal = clamped;
+    goalInput.value = clamped;
     if (state.count > state.goal) {
       state.count = state.goal;
     }
