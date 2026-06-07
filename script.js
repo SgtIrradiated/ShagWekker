@@ -57,15 +57,6 @@ const STATIC_AUDIO_REFERENCES = [
 ];
 
 const DEFAULT_ACCENT_COLOR = "#ff0000";
-const BOMBOCLOCK_ACCENT_COLOR = "#1f8a3b";
-const BOMBOCLOCK_ACTIVATION_CLICKS = 3;
-const BOMBOCLOCK_REPLACEMENTS = [
-  { pattern: /Shaggies/g, replacement: "Jonkos" },
-  { pattern: /shaggies/g, replacement: "jonkos" },
-  { pattern: /ShagWekker/g, replacement: "BomboClock" },
-  { pattern: /Shag/g, replacement: "Jonko" },
-  { pattern: /shag/g, replacement: "jonko" }
-];
 const HEX_COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
 const PREFERENCE_KEYS = {
@@ -284,346 +275,630 @@ function formatAudioTime(seconds) {
   return `${minutes}:${pad(remainder)}`;
 }
 
+const AUDIO_STATE_KEY = "shagwekker.audio.state.v1";
+const LEGACY_AUDIO_SHUFFLE_KEY = "shagwekker.audio.shuffle.v1";
+const AUDIO_REPEAT_MODES = ["off", "all", "one"];
+const AUDIO_DEFAULT_VOLUME = 0.8;
+const AUDIO_VISUALIZER_FFT = 64;
+
+function loadAudioState() {
+  const raw = readStoredPreference(AUDIO_STATE_KEY);
+  if (raw) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        return parsed;
+      }
+    } catch (error) {
+      console.warn("Kon audiostatus niet lezen", error);
+    }
+  }
+  // Migrate the legacy shuffle-only preference into the unified state shape.
+  const legacyShuffle = readStoredPreference(LEGACY_AUDIO_SHUFFLE_KEY);
+  if (legacyShuffle !== null) {
+    return { shuffle: legacyShuffle === "true" };
+  }
+  return {};
+}
+
 function initAudioPlayer() {
   const playerEl = document.querySelector("[data-audio-player]");
   if (!playerEl) {
     return;
   }
 
-  const loungeSection = playerEl.closest(".audio-lounge");
-  const selectEl = playerEl.querySelector("[data-audio-select]");
-  const statusEl = playerEl.querySelector("[data-audio-status]");
-  const emptyStateEl = playerEl.querySelector("[data-audio-empty]");
-  const titleEl = playerEl.querySelector("[data-audio-title]");
-  const metaEl = playerEl.querySelector("[data-audio-meta]");
-  const artEl = playerEl.querySelector("[data-audio-art]");
-  const playButton = playerEl.querySelector("[data-audio-play]");
-  const stopButton = playerEl.querySelector("[data-audio-stop]");
-  const progressInput = playerEl.querySelector("[data-audio-progress]");
-  const currentTimeEl = playerEl.querySelector("[data-audio-current]");
-  const totalTimeEl = playerEl.querySelector("[data-audio-total]");
-  const downloadLink = playerEl.querySelector("[data-audio-download]");
-  const volumeInput = playerEl.querySelector("[data-audio-volume]");
-  const volumeBox = playerEl.querySelector(".audio-player__volume-box");
+  const els = {
+    lounge: playerEl.closest(".audio-lounge"),
+    select: playerEl.querySelector("[data-audio-select]"),
+    status: playerEl.querySelector("[data-audio-status]"),
+    empty: playerEl.querySelector("[data-audio-empty]"),
+    title: playerEl.querySelector("[data-audio-title]"),
+    meta: playerEl.querySelector("[data-audio-meta]"),
+    art: playerEl.querySelector("[data-audio-art]"),
+    play: playerEl.querySelector("[data-audio-play]"),
+    stop: playerEl.querySelector("[data-audio-stop]"),
+    prev: playerEl.querySelector("[data-audio-prev]"),
+    next: playerEl.querySelector("[data-audio-next]"),
+    shuffle: playerEl.querySelector("[data-audio-shuffle]"),
+    repeat: playerEl.querySelector("[data-audio-repeat]"),
+    mute: playerEl.querySelector("[data-audio-mute]"),
+    download: playerEl.querySelector("[data-audio-download]"),
+    progress: playerEl.querySelector("[data-audio-progress]"),
+    current: playerEl.querySelector("[data-audio-current]"),
+    total: playerEl.querySelector("[data-audio-total]"),
+    volume: playerEl.querySelector("[data-audio-volume]"),
+    volumeBox: playerEl.querySelector(".audio-player__volume-box"),
+    waveform: playerEl.querySelector(".audio-player__waveform"),
+  };
 
-  if (
-    !selectEl ||
-    !statusEl ||
-    !playButton ||
-    !stopButton ||
-    !progressInput ||
-    !currentTimeEl ||
-    !totalTimeEl
-  ) {
+  if (!els.select || !els.status || !els.play || !els.stop || !els.progress || !els.current || !els.total) {
     return;
   }
 
-  progressInput.max = String(AUDIO_PROGRESS_STEPS);
+  els.progress.max = String(AUDIO_PROGRESS_STEPS);
   playerEl.dataset.state = "loading";
 
-  const defaultTrackTitle = titleEl?.textContent?.trim() || "Shag Archives Mix";
-  const defaultTrackMeta = metaEl?.textContent?.trim() || "Wachtend op selectie";
-  const defaultCover = artEl?.getAttribute("data-fallback-src") || artEl?.getAttribute("src") || "";
+  const defaults = {
+    title: els.title?.textContent?.trim() || "Shag Archives Mix",
+    meta: els.meta?.textContent?.trim() || "Wachtend op selectie",
+    cover: els.art?.getAttribute("data-fallback-src") || els.art?.getAttribute("src") || "",
+  };
+
+  const persisted = loadAudioState();
+  const reducedMotion =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const audio = new Audio();
   audio.preload = "auto";
-  const DEFAULT_VOLUME = 0.8;
-  audio.volume = DEFAULT_VOLUME;
 
-  let tracks = [];
-  let activeTrackIndex = -1;
-  let isSeeking = false;
-
-  const applyTrackDetail = track => {
-    if (titleEl) {
-      titleEl.textContent = track?.label ?? defaultTrackTitle;
-    }
-    if (metaEl) {
-      if (track) {
-        const meta = track.artist || track.album || (track.fileName ? prettifyTrackLabel(track.fileName) : null);
-        metaEl.textContent = meta || "Shag Archives";
-      } else {
-        metaEl.textContent = defaultTrackMeta;
-      }
-    }
-    if (artEl) {
-      const nextCover = track?.cover || defaultCover;
-      if (nextCover) {
-        artEl.src = nextCover;
-      }
-      artEl.alt = track ? `Album art voor ${track.label}` : "Album art placeholder";
-    }
+  const state = {
+    tracks: [],
+    index: -1,
+    seeking: false,
+    shuffle: Boolean(persisted.shuffle),
+    repeat: AUDIO_REPEAT_MODES.includes(persisted.repeat) ? persisted.repeat : "off",
+    muted: Boolean(persisted.muted),
+    lastVolume: clampVolume(persisted.volume, AUDIO_DEFAULT_VOLUME),
+    pendingSeek: typeof persisted.time === "number" && persisted.time > 0 ? persisted.time : 0,
   };
 
-  applyTrackDetail(null);
+  audio.volume = state.lastVolume;
+  audio.muted = state.muted;
 
-  const setStatus = message => {
-    statusEl.textContent = message;
-  };
-
-  const applyVolumeVisual = ratio => {
-    if (!volumeInput) {
+  /* ── Persistence ──────────────────────────────────────────── */
+  let persistTimer = 0;
+  const snapshot = () => ({
+    index: state.index,
+    time: Number.isFinite(audio.currentTime) ? Math.floor(audio.currentTime) : 0,
+    volume: state.lastVolume,
+    muted: state.muted,
+    shuffle: state.shuffle,
+    repeat: state.repeat,
+  });
+  const persist = () => writeStoredPreference(AUDIO_STATE_KEY, JSON.stringify(snapshot()));
+  const persistSoon = () => {
+    if (persistTimer) {
       return;
     }
-    const clamped = Math.max(0, Math.min(1, ratio));
-    volumeInput.style.setProperty("--audio-volume", `${Math.round(clamped * 100)}%`);
-    if (volumeBox) {
-      volumeBox.style.setProperty("--audio-volume", `${Math.round(clamped * 100)}%`);
+    persistTimer = window.setTimeout(() => {
+      persistTimer = 0;
+      persist();
+    }, 1500);
+  };
+
+  /* ── Status helper ────────────────────────────────────────── */
+  const setStatus = message => {
+    els.status.textContent = message;
+  };
+
+  /* ── Now-playing metadata ─────────────────────────────────── */
+  const renderTrackDetail = track => {
+    if (els.title) {
+      els.title.textContent = track?.label ?? defaults.title;
     }
+    if (els.meta) {
+      const meta = track
+        ? track.artist || track.album || (track.fileName ? prettifyTrackLabel(track.fileName) : null) || "Shag Archives"
+        : defaults.meta;
+      els.meta.textContent = meta;
+    }
+    if (els.art) {
+      const cover = track?.cover || defaults.cover;
+      if (cover) {
+        els.art.src = cover;
+      }
+      els.art.alt = track ? `Album art voor ${track.label}` : "Album art placeholder";
+    }
+    updateMediaSession(track);
+  };
+
+  /* ── Media Session (OS / lock-screen controls) ────────────── */
+  const updateMediaSession = track => {
+    if (!("mediaSession" in navigator)) {
+      return;
+    }
+    if (!track) {
+      navigator.mediaSession.metadata = null;
+      return;
+    }
+    try {
+      const artwork = track.cover || defaults.cover;
+      navigator.mediaSession.metadata = new window.MediaMetadata({
+        title: track.label,
+        artist: track.artist || "Shag Archives",
+        album: track.album || "ShagWekker Soundscapes",
+        artwork: artwork ? [{ src: artwork, sizes: "512x512", type: "image/png" }] : [],
+      });
+    } catch (error) {
+      console.warn("Media Session metadata mislukt", error);
+    }
+  };
+
+  if ("mediaSession" in navigator) {
+    const ms = navigator.mediaSession;
+    const safe = fn => () => {
+      try {
+        fn();
+      } catch (error) {
+        console.warn("Media Session actie mislukt", error);
+      }
+    };
+    ms.setActionHandler("play", safe(() => play()));
+    ms.setActionHandler("pause", safe(() => audio.pause()));
+    ms.setActionHandler("previoustrack", safe(() => cycle(-1)));
+    ms.setActionHandler("nexttrack", safe(() => cycle(1)));
+    ms.setActionHandler("seekto", safe(details => {
+      if (details && typeof details.seekTime === "number") {
+        audio.currentTime = details.seekTime;
+      }
+    }));
+  }
+
+  /* ── Transport button states ──────────────────────────────── */
+  const renderToggle = (button, active) => {
+    if (!button) {
+      return;
+    }
+    button.setAttribute("aria-pressed", String(Boolean(active)));
+    button.classList.toggle("is-active", Boolean(active));
+  };
+
+  const renderTransport = () => {
+    renderToggle(els.shuffle, state.shuffle);
+    if (els.repeat) {
+      els.repeat.dataset.mode = state.repeat;
+      const active = state.repeat !== "off";
+      els.repeat.setAttribute("aria-pressed", String(active));
+      els.repeat.classList.toggle("is-active", active);
+      els.repeat.classList.toggle("is-one", state.repeat === "one");
+      const labels = { off: "Herhaal: uit", all: "Herhaal: alles", one: "Herhaal: deze track" };
+      els.repeat.setAttribute("aria-label", labels[state.repeat]);
+    }
+    renderMute();
+  };
+
+  const renderMute = () => {
+    const silent = state.muted || state.lastVolume === 0;
+    renderToggle(els.mute, silent);
+    if (els.mute) {
+      els.mute.setAttribute("aria-label", silent ? "Geluid aan" : "Dempen");
+    }
+    playerEl.classList.toggle("is-muted", silent);
+  };
+
+  const renderPlayState = playing => {
+    playerEl.classList.toggle("is-playing", playing);
+    if (els.lounge) {
+      els.lounge.classList.toggle("audio-lounge--playing", playing);
+    }
+    els.play.setAttribute("aria-label", playing ? "Pause" : "Play");
+    els.play.setAttribute("aria-pressed", String(playing));
+    if ("mediaSession" in navigator) {
+      navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+    }
+  };
+
+  /* ── Progress / time ──────────────────────────────────────── */
+  const setProgressVisual = ratio => {
+    els.progress.style.setProperty("--audio-progress", `${(ratio * 100).toFixed(2)}%`);
   };
 
   const resetProgress = () => {
-    progressInput.value = "0";
-    progressInput.disabled = true;
-    progressInput.style.setProperty("--audio-progress", "0%");
-    currentTimeEl.textContent = "0:00";
-    totalTimeEl.textContent = "0:00";
+    els.progress.value = "0";
+    els.progress.disabled = true;
+    setProgressVisual(0);
+    els.current.textContent = "0:00";
+    els.total.textContent = "0:00";
   };
 
-  const updateDownloadLink = track => {
-    if (!downloadLink) {
-      return;
-    }
-    if (track) {
-      downloadLink.hidden = false;
-      downloadLink.href = track.url;
-      const suggestedName = (track.fileName || track.label.replace(/\s+/g, "-")).toLowerCase();
-      downloadLink.setAttribute("download", suggestedName);
-      downloadLink.setAttribute("aria-label", `Download ${track.label}`);
-    } else {
-      downloadLink.hidden = true;
-      downloadLink.removeAttribute("href");
-      downloadLink.removeAttribute("aria-label");
-    }
-  };
-
-  const updatePlayState = isPlaying => {
-    playerEl.classList.toggle("is-playing", Boolean(isPlaying));
-    if (loungeSection) {
-      loungeSection.classList.toggle("audio-lounge--playing", Boolean(isPlaying));
-    }
-    playButton.setAttribute("aria-label", isPlaying ? "Pause" : "Play");
-  };
-
-  const updateProgress = ended => {
+  const renderProgress = ended => {
     if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
-      progressInput.style.setProperty("--audio-progress", "0%");
+      setProgressVisual(0);
       return;
     }
     const ratio = ended ? 1 : Math.max(0, Math.min(1, audio.currentTime / audio.duration));
-    progressInput.value = String(Math.round(ratio * AUDIO_PROGRESS_STEPS));
-    progressInput.style.setProperty("--audio-progress", `${(ratio * 100).toFixed(2)}%`);
-    currentTimeEl.textContent = formatAudioTime(ended ? audio.duration : audio.currentTime);
-    totalTimeEl.textContent = formatAudioTime(audio.duration);
+    els.progress.value = String(Math.round(ratio * AUDIO_PROGRESS_STEPS));
+    setProgressVisual(ratio);
+    els.current.textContent = formatAudioTime(ended ? audio.duration : audio.currentTime);
+    els.total.textContent = formatAudioTime(audio.duration);
   };
 
-  const selectTrack = index => {
-    if (!tracks.length) {
-      applyTrackDetail(null);
+  /* ── Volume ───────────────────────────────────────────────── */
+  const applyVolumeVisual = ratio => {
+    const pct = `${Math.round(Math.max(0, Math.min(1, ratio)) * 100)}%`;
+    els.volume?.style.setProperty("--audio-volume", pct);
+    els.volumeBox?.style.setProperty("--audio-volume", pct);
+  };
+
+  const applyVolume = (ratio, { fromSlider = false } = {}) => {
+    const clamped = clampVolume(ratio, AUDIO_DEFAULT_VOLUME);
+    state.lastVolume = clamped;
+    state.muted = clamped === 0;
+    audio.muted = state.muted;
+    audio.volume = clamped;
+    applyVolumeVisual(clamped);
+    if (els.volume && !fromSlider) {
+      els.volume.value = String(Math.round(clamped * 100));
+    }
+    renderMute();
+    persistSoon();
+  };
+
+  const toggleMute = () => {
+    if (state.muted || audio.muted) {
+      state.muted = false;
+      audio.muted = false;
+      if (state.lastVolume === 0) {
+        applyVolume(AUDIO_DEFAULT_VOLUME);
+        return;
+      }
+      audio.volume = state.lastVolume;
+    } else {
+      state.muted = true;
+      audio.muted = true;
+    }
+    renderMute();
+    persistSoon();
+  };
+
+  /* ── Download link ────────────────────────────────────────── */
+  const updateDownloadLink = track => {
+    if (!els.download) {
       return;
     }
-    const nextIndex = Number(index);
-    if (!Number.isInteger(nextIndex) || !tracks[nextIndex]) {
+    if (track) {
+      els.download.hidden = false;
+      els.download.href = track.url;
+      const name = (track.fileName || track.label.replace(/\s+/g, "-")).toLowerCase();
+      els.download.setAttribute("download", name);
+      els.download.setAttribute("aria-label", `Download ${track.label}`);
+    } else {
+      els.download.hidden = true;
+      els.download.removeAttribute("href");
+      els.download.removeAttribute("aria-label");
+    }
+  };
+
+  /* ── Live Web Audio visualizer ────────────────────────────── */
+  const viz = { ctx: null, analyser: null, data: null, raf: 0, bars: [], failed: false };
+  if (els.waveform) {
+    viz.bars = Array.from(els.waveform.querySelectorAll("span"));
+  }
+
+  const setupVisualizer = () => {
+    if (viz.ctx || viz.failed || reducedMotion || !viz.bars.length) {
+      return;
+    }
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) {
+      viz.failed = true;
+      return;
+    }
+    try {
+      viz.ctx = new Ctx();
+      const source = viz.ctx.createMediaElementSource(audio);
+      viz.analyser = viz.ctx.createAnalyser();
+      viz.analyser.fftSize = AUDIO_VISUALIZER_FFT;
+      viz.analyser.smoothingTimeConstant = 0.8;
+      viz.data = new Uint8Array(viz.analyser.frequencyBinCount);
+      source.connect(viz.analyser);
+      viz.analyser.connect(viz.ctx.destination);
+      els.waveform.classList.add("audio-player__waveform--live");
+    } catch (error) {
+      console.warn("Visualizer niet beschikbaar, val terug op animatie", error);
+      viz.failed = true;
+      viz.ctx = null;
+    }
+  };
+
+  const renderVisualizer = () => {
+    if (!viz.analyser) {
+      return;
+    }
+    viz.analyser.getByteFrequencyData(viz.data);
+    const bins = viz.data.length;
+    for (let i = 0; i < viz.bars.length; i += 1) {
+      const value = viz.data[Math.min(i, bins - 1)] / 255;
+      const height = 8 + value * 92;
+      viz.bars[i].style.height = `${height.toFixed(1)}%`;
+    }
+    viz.raf = window.requestAnimationFrame(renderVisualizer);
+  };
+
+  const startVisualizer = () => {
+    if (viz.failed || reducedMotion) {
+      return;
+    }
+    setupVisualizer();
+    if (viz.ctx && viz.ctx.state === "suspended") {
+      viz.ctx.resume().catch(() => {});
+    }
+    if (viz.analyser && !viz.raf) {
+      viz.raf = window.requestAnimationFrame(renderVisualizer);
+    }
+  };
+
+  const stopVisualizer = () => {
+    if (viz.raf) {
+      window.cancelAnimationFrame(viz.raf);
+      viz.raf = 0;
+    }
+    viz.bars.forEach(bar => {
+      bar.style.removeProperty("height");
+    });
+  };
+
+  /* ── Track loading & playback ─────────────────────────────── */
+  const loadTrack = (index, { autoplay = false } = {}) => {
+    if (!state.tracks.length) {
+      renderTrackDetail(null);
+      return;
+    }
+    const next = Number(index);
+    if (!Number.isInteger(next) || !state.tracks[next]) {
       audio.pause();
       audio.removeAttribute("src");
       audio.load();
-      activeTrackIndex = -1;
+      state.index = -1;
       resetProgress();
       updateDownloadLink(null);
+      renderTrackDetail(null);
       setStatus("Selecteer een track om te luisteren.");
-      applyTrackDetail(null);
+      els.select.value = "";
       return;
     }
 
-    const track = tracks[nextIndex];
-    const shouldResume = !audio.paused && !audio.ended;
+    const track = state.tracks[next];
+    const wasPlaying = !audio.paused && !audio.ended;
     audio.pause();
-    activeTrackIndex = nextIndex;
+    state.index = next;
+    els.select.value = String(next);
     resetProgress();
     updateDownloadLink(track);
     audio.src = track.url;
     audio.load();
+    renderTrackDetail(track);
     setStatus(`Geselecteerd: ${track.label}. Druk op play.`);
-    applyTrackDetail(track);
 
-    if (shouldResume) {
-      const resumePlayback = () => {
-        audio.play().catch(error => {
-          console.warn("Autoplay blocked", error);
-          setStatus(`Geselecteerd: ${track.label}. Klik op play om te starten.`);
-        });
-      };
-      audio.addEventListener("canplay", resumePlayback, { once: true });
+    if (autoplay || wasPlaying) {
+      audio.addEventListener("canplay", () => play(), { once: true });
     }
+    persistSoon();
   };
 
-  const populateSelect = () => {
-    selectEl.innerHTML = "";
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = "Kies een track...";
-    selectEl.appendChild(placeholder);
-
-    tracks.forEach((track, index) => {
-      const option = document.createElement("option");
-      option.value = String(index);
-      option.textContent = track.label;
-      selectEl.appendChild(option);
-    });
-
-    selectEl.disabled = false;
-    selectEl.value = "";
-    if (emptyStateEl) {
-      emptyStateEl.hidden = true;
+  function play() {
+    if (!state.tracks.length) {
+      return;
     }
-    playerEl.dataset.state = "ready";
-    setStatus("Selecteer een track en druk op play.");
+    if (state.index === -1) {
+      loadTrack(0);
+    }
+    startVisualizer();
+    return audio
+      .play()
+      .then(() => {
+        if (state.index >= 0) {
+          setStatus(`Aan het spelen: ${state.tracks[state.index].label}`);
+        }
+      })
+      .catch(error => {
+        console.warn("Afspelen geblokkeerd", error);
+        setStatus("Afspelen werd geblokkeerd. Klik opnieuw om te proberen.");
+      });
+  }
+
+  const togglePlay = () => {
+    if (!state.tracks.length) {
+      return;
+    }
+    if (audio.paused || audio.ended) {
+      play();
+    } else {
+      audio.pause();
+    }
   };
 
   const stopPlayback = () => {
     audio.pause();
     audio.currentTime = 0;
-    updateProgress();
-    updatePlayState(false);
+    renderProgress();
+    renderPlayState(false);
+    persist();
   };
 
-  resetProgress();
-  updateDownloadLink(null);
-  setStatus("Vaste playlist wordt geladen...");
-
-  if (volumeInput) {
-    const initialValue = Number(volumeInput.value);
-    const normalized = Number.isFinite(initialValue) ? Math.max(0, Math.min(100, initialValue)) / 100 : DEFAULT_VOLUME;
-    audio.volume = normalized;
-    volumeInput.value = String(Math.round(normalized * 100));
-    applyVolumeVisual(normalized);
-
-    const handleVolumeInput = event => {
-      const value = Number(event.target.value);
-      const ratio = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) / 100 : 0;
-      audio.volume = ratio;
-      applyVolumeVisual(ratio);
-    };
-
-    volumeInput.addEventListener("input", handleVolumeInput);
-    volumeInput.addEventListener("change", handleVolumeInput);
+  function cycle(delta) {
+    if (!state.tracks.length) {
+      return;
+    }
+    let next;
+    if (state.shuffle && state.tracks.length > 1) {
+      do {
+        next = Math.floor(Math.random() * state.tracks.length);
+      } while (next === state.index);
+    } else {
+      const base = state.index === -1 ? 0 : state.index;
+      next = (base + delta + state.tracks.length) % state.tracks.length;
+    }
+    loadTrack(next, { autoplay: true });
   }
 
+  /* ── Track list population ────────────────────────────────── */
+  const populateSelect = () => {
+    els.select.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Kies een track...";
+    els.select.appendChild(placeholder);
+    state.tracks.forEach((track, index) => {
+      const option = document.createElement("option");
+      option.value = String(index);
+      option.textContent = track.label;
+      els.select.appendChild(option);
+    });
+    els.select.disabled = false;
+    els.select.value = "";
+    if (els.empty) {
+      els.empty.hidden = true;
+    }
+    playerEl.dataset.state = "ready";
+    setStatus("Selecteer een track en druk op play.");
+  };
+
+  /* ── Initial UI sync ──────────────────────────────────────── */
+  resetProgress();
+  updateDownloadLink(null);
+  renderTrackDetail(null);
+  renderTransport();
+  if (els.volume) {
+    els.volume.value = String(Math.round(state.lastVolume * 100));
+  }
+  applyVolumeVisual(state.lastVolume);
+  setStatus("Vaste playlist wordt geladen...");
+
+  /* ── Load tracks, then restore session ────────────────────── */
   discoverAudioTracks()
-    .then(foundTracks => {
-      tracks = foundTracks;
-      activeTrackIndex = -1;
-      if (tracks.length) {
-        populateSelect();
-        applyTrackDetail(null);
-      } else {
-        selectEl.disabled = true;
-        if (emptyStateEl) {
-          emptyStateEl.hidden = false;
+    .then(found => {
+      state.tracks = found;
+      if (!state.tracks.length) {
+        els.select.disabled = true;
+        if (els.empty) {
+          els.empty.hidden = false;
         }
         playerEl.dataset.state = "empty";
         setStatus("Geen audiobestanden gevonden. Werk de vaste playlist bij in script.js.");
-        updateDownloadLink(null);
-        applyTrackDetail(null);
+        return;
+      }
+      populateSelect();
+      const restoreIndex = Number(persisted.index);
+      if (Number.isInteger(restoreIndex) && state.tracks[restoreIndex]) {
+        loadTrack(restoreIndex);
+        setStatus(`Hervat: ${state.tracks[restoreIndex].label}. Druk op play.`);
       }
     })
     .catch(error => {
-      console.error("Audio discovery failed", error);
-      selectEl.disabled = true;
-      if (emptyStateEl) {
-        emptyStateEl.hidden = false;
+      console.error("Audio discovery faalde", error);
+      els.select.disabled = true;
+      if (els.empty) {
+        els.empty.hidden = false;
       }
       playerEl.dataset.state = "error";
       setStatus("Kon de vaste playlist niet laden. Controleer je configuratie.");
-      applyTrackDetail(null);
     });
 
-  selectEl.addEventListener("change", event => {
+  /* ── Event wiring: controls ───────────────────────────────── */
+  els.select.addEventListener("change", event => {
     const { value } = event.target;
-    if (value === "") {
-      selectTrack(-1);
-      return;
-    }
-    selectTrack(Number(value));
+    loadTrack(value === "" ? -1 : Number(value));
   });
 
-  playButton.addEventListener("click", () => {
-    if (!tracks.length) {
-      return;
-    }
-    if (activeTrackIndex === -1) {
-      selectTrack(0);
-    }
-    if (audio.paused || audio.ended) {
-      audio
-        .play()
-        .then(() => {
-          if (activeTrackIndex >= 0) {
-            setStatus(`Aan het spelen: ${tracks[activeTrackIndex].label}`);
-          }
-        })
-        .catch(error => {
-          console.warn("Audio playback failed", error);
-          setStatus("Afspelen werd geblokkeerd. Klik opnieuw om te proberen.");
-        });
-    } else {
-      audio.pause();
-    }
-  });
-
-  stopButton.addEventListener("click", () => {
-    if (!tracks.length) {
+  els.play.addEventListener("click", togglePlay);
+  els.stop.addEventListener("click", () => {
+    if (!state.tracks.length) {
       return;
     }
     stopPlayback();
-    if (activeTrackIndex >= 0) {
-      setStatus(`Gestopt: ${tracks[activeTrackIndex].label}`);
-    } else {
-      setStatus("Afspelen gestopt.");
-    }
+    setStatus(state.index >= 0 ? `Gestopt: ${state.tracks[state.index].label}` : "Afspelen gestopt.");
+  });
+  els.prev?.addEventListener("click", () => cycle(-1));
+  els.next?.addEventListener("click", () => cycle(1));
+
+  els.shuffle?.addEventListener("click", () => {
+    state.shuffle = !state.shuffle;
+    renderTransport();
+    persist();
   });
 
-  progressInput.addEventListener("input", () => {
+  els.repeat?.addEventListener("click", () => {
+    const i = AUDIO_REPEAT_MODES.indexOf(state.repeat);
+    state.repeat = AUDIO_REPEAT_MODES[(i + 1) % AUDIO_REPEAT_MODES.length];
+    renderTransport();
+    persist();
+  });
+
+  els.mute?.addEventListener("click", toggleMute);
+
+  /* ── Event wiring: volume ─────────────────────────────────── */
+  if (els.volume) {
+    const onVolume = event => {
+      const value = Number(event.target.value);
+      const ratio = Number.isFinite(value) ? Math.max(0, Math.min(100, value)) / 100 : 0;
+      applyVolume(ratio, { fromSlider: true });
+    };
+    els.volume.addEventListener("input", onVolume);
+    els.volume.addEventListener("change", onVolume);
+  }
+
+  /* ── Event wiring: seek ───────────────────────────────────── */
+  els.progress.addEventListener("input", () => {
     if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
       return;
     }
-    isSeeking = true;
-    const ratio = Number(progressInput.value) / AUDIO_PROGRESS_STEPS;
-    const targetTime = ratio * audio.duration;
-    currentTimeEl.textContent = formatAudioTime(targetTime);
-    progressInput.style.setProperty("--audio-progress", `${(ratio * 100).toFixed(2)}%`);
+    state.seeking = true;
+    const ratio = Number(els.progress.value) / AUDIO_PROGRESS_STEPS;
+    els.current.textContent = formatAudioTime(ratio * audio.duration);
+    setProgressVisual(ratio);
   });
 
-  const endSeeking = () => {
+  const endSeek = () => {
     if (!Number.isFinite(audio.duration) || audio.duration <= 0) {
-      isSeeking = false;
+      state.seeking = false;
       return;
     }
-    const ratio = Number(progressInput.value) / AUDIO_PROGRESS_STEPS;
+    const ratio = Number(els.progress.value) / AUDIO_PROGRESS_STEPS;
     audio.currentTime = ratio * audio.duration;
-    isSeeking = false;
+    state.seeking = false;
+    persistSoon();
   };
+  els.progress.addEventListener("change", endSeek);
+  els.progress.addEventListener("mouseup", endSeek);
+  els.progress.addEventListener("touchend", endSeek, { passive: true });
 
-  progressInput.addEventListener("change", endSeeking);
-  progressInput.addEventListener("mouseup", endSeeking);
-  progressInput.addEventListener("touchend", endSeeking, { passive: true });
-
+  /* ── Event wiring: media element ──────────────────────────── */
   audio.addEventListener("loadedmetadata", () => {
-    progressInput.disabled = false;
-    updateProgress();
+    els.progress.disabled = false;
+    if (state.pendingSeek > 0 && state.pendingSeek < audio.duration) {
+      audio.currentTime = state.pendingSeek;
+    }
+    state.pendingSeek = 0;
+    renderProgress();
   });
 
   audio.addEventListener("timeupdate", () => {
-    if (isSeeking) {
+    if (state.seeking) {
       return;
     }
-    updateProgress();
+    renderProgress();
+    if (!audio.paused) {
+      persistSoon();
+    }
   });
 
   audio.addEventListener("play", () => {
-    updatePlayState(true);
-    if (activeTrackIndex >= 0) {
-      setStatus(`Aan het spelen: ${tracks[activeTrackIndex].label}`);
+    renderPlayState(true);
+    startVisualizer();
+    if (state.index >= 0) {
+      setStatus(`Aan het spelen: ${state.tracks[state.index].label}`);
     }
   });
 
@@ -631,88 +906,50 @@ function initAudioPlayer() {
     if (audio.ended) {
       return;
     }
-    updatePlayState(false);
-    if (activeTrackIndex >= 0) {
-      setStatus(`Gepauzeerd: ${tracks[activeTrackIndex].label}`);
+    renderPlayState(false);
+    stopVisualizer();
+    if (state.index >= 0) {
+      setStatus(`Gepauzeerd: ${state.tracks[state.index].label}`);
     }
+    persist();
   });
 
   audio.addEventListener("ended", () => {
-    updateProgress(true);
-    updatePlayState(false);
-    if (activeTrackIndex >= 0) {
-      setStatus(`Track afgelopen: ${tracks[activeTrackIndex].label}`);
-    } else {
-      setStatus("Track afgelopen.");
+    renderProgress(true);
+    stopVisualizer();
+    if (!state.tracks.length) {
+      renderPlayState(false);
+      return;
     }
+    if (state.repeat === "one") {
+      audio.currentTime = 0;
+      play();
+      return;
+    }
+    const isLast = state.index >= state.tracks.length - 1;
+    if (state.shuffle || state.repeat === "all" || !isLast) {
+      cycle(1);
+      return;
+    }
+    renderPlayState(false);
+    setStatus("Einde van de playlist.");
+    persist();
   });
 
   audio.addEventListener("emptied", () => {
     resetProgress();
-    updatePlayState(false);
+    renderPlayState(false);
   });
 
   audio.addEventListener("error", event => {
-    console.warn("Audio error", event);
-    updatePlayState(false);
+    console.warn("Audiofout", event);
+    renderPlayState(false);
+    stopVisualizer();
     resetProgress();
     setStatus("Kan de geselecteerde track niet afspelen.");
   });
 
-  const prevButton = playerEl.querySelector("[data-audio-prev]");
-  const nextButton = playerEl.querySelector("[data-audio-next]");
-  const shuffleButton = playerEl.querySelector("[data-audio-shuffle]");
-  let shuffle = readStoredPreference("shagwekker.audio.shuffle.v1") === "true";
-
-  const syncShuffle = () => {
-    if (shuffleButton) {
-      shuffleButton.setAttribute("aria-pressed", String(shuffle));
-      shuffleButton.classList.toggle("is-active", shuffle);
-    }
-  };
-  syncShuffle();
-
-  const cycleTrack = delta => {
-    if (!tracks.length) {
-      return;
-    }
-    let nextIndex;
-    if (shuffle && tracks.length > 1) {
-      do {
-        nextIndex = Math.floor(Math.random() * tracks.length);
-      } while (nextIndex === activeTrackIndex);
-    } else {
-      const base = activeTrackIndex === -1 ? 0 : activeTrackIndex;
-      nextIndex = (base + delta + tracks.length) % tracks.length;
-    }
-    selectTrack(nextIndex);
-    selectEl.value = String(nextIndex);
-    audio.play().catch(() => {});
-  };
-
-  if (prevButton) {
-    prevButton.addEventListener("click", () => cycleTrack(-1));
-  }
-  if (nextButton) {
-    nextButton.addEventListener("click", () => cycleTrack(1));
-  }
-  if (shuffleButton) {
-    shuffleButton.addEventListener("click", () => {
-      shuffle = !shuffle;
-      writeStoredPreference("shagwekker.audio.shuffle.v1", shuffle ? "true" : "false");
-      syncShuffle();
-    });
-  }
-
-  audio.addEventListener("ended", () => {
-    if (!tracks.length) {
-      return;
-    }
-    if (shuffle || activeTrackIndex < tracks.length - 1) {
-      cycleTrack(1);
-    }
-  });
-
+  /* ── Event wiring: keyboard shortcuts ─────────────────────── */
   playerEl.addEventListener("keydown", event => {
     if (event.target.matches("input, select, textarea")) {
       return;
@@ -720,7 +957,7 @@ function initAudioPlayer() {
     switch (event.key) {
       case " ":
         event.preventDefault();
-        playButton.click();
+        togglePlay();
         break;
       case "ArrowRight":
         if (Number.isFinite(audio.duration)) {
@@ -734,24 +971,34 @@ function initAudioPlayer() {
         break;
       case "n":
       case "N":
-        cycleTrack(1);
+        cycle(1);
         break;
       case "p":
       case "P":
-        cycleTrack(-1);
+        cycle(-1);
         break;
       case "m":
       case "M":
-        audio.muted = !audio.muted;
+        toggleMute();
         break;
       case "s":
       case "S":
-        if (shuffleButton) {
-          shuffleButton.click();
-        }
+        els.shuffle?.click();
+        break;
+      case "r":
+      case "R":
+        els.repeat?.click();
         break;
       default:
         break;
+    }
+  });
+
+  /* ── Persist on page hide ─────────────────────────────────── */
+  window.addEventListener("pagehide", persist);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      persist();
     }
   });
 
@@ -760,32 +1007,12 @@ function initAudioPlayer() {
   }
 }
 
-function initSoundboard() {
-  const grid = document.getElementById("soundboardGrid");
-  if (!grid) {
-    return;
+function clampVolume(value, fallback) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) {
+    return fallback;
   }
-  grid.addEventListener("click", event => {
-    const pad = event.target.closest(".soundboard__pad");
-    if (!pad) {
-      return;
-    }
-    const src = pad.dataset.audioSrc;
-    if (!src) {
-      return;
-    }
-    try {
-      const clip = new Audio(resolveAudioUrl(src));
-      clip.volume = 0.85;
-      clip.play().catch(() => {});
-      pad.classList.add("soundboard__pad--active");
-      const clear = () => pad.classList.remove("soundboard__pad--active");
-      clip.addEventListener("ended", clear, { once: true });
-      setTimeout(clear, 6000);
-    } catch (error) {
-      console.warn("Soundboard clip kon niet spelen", error);
-    }
-  });
+  return Math.max(0, Math.min(1, num));
 }
 
 function loadCustomEvents() {
@@ -1554,154 +1781,6 @@ function resetAccentColor() {
   setAccentColor(DEFAULT_ACCENT_COLOR, { persist: true });
 }
 
-function initBomboClockEasterEgg() {
-  const brand = document.querySelector(".site-header .brand");
-  if (!brand) {
-    return;
-  }
-
-  let activationCount = 0;
-  let textTransformed = false;
-  let accentApplied = false;
-  const animationClass = "brand--bombo-hint";
-
-  const triggerHintAnimation = () => {
-    brand.classList.remove(animationClass);
-    // Force a reflow so the animation can replay on successive clicks.
-    void brand.offsetWidth;
-    brand.classList.add(animationClass);
-  };
-
-  const applyReplacements = () => {
-    if (textTransformed) {
-      return;
-    }
-
-    const walker = document.createTreeWalker(
-      document.body,
-      NodeFilter.SHOW_TEXT,
-      {
-        acceptNode(node) {
-          return node && node.nodeValue && node.nodeValue.trim()
-            ? NodeFilter.FILTER_ACCEPT
-            : NodeFilter.FILTER_REJECT;
-        }
-      }
-    );
-
-    const transform = value =>
-      BOMBOCLOCK_REPLACEMENTS.reduce((current, replacement) => {
-        return current.replace(replacement.pattern, replacement.replacement);
-      }, value);
-
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-      const original = node.nodeValue;
-      const updated = transform(original);
-      if (updated !== original) {
-        node.nodeValue = updated;
-      }
-    }
-
-    if (typeof document.title === "string" && document.title) {
-      const updatedTitle = transform(document.title);
-      if (updatedTitle !== document.title) {
-        document.title = updatedTitle;
-      }
-    }
-
-    document.querySelectorAll("[aria-label]").forEach(element => {
-      const label = element.getAttribute("aria-label");
-      if (label) {
-        const updated = transform(label);
-        if (updated !== label) {
-          element.setAttribute("aria-label", updated);
-        }
-      }
-    });
-
-    textTransformed = true;
-  };
-
-  const applyAccent = () => {
-    if (accentApplied) {
-      return;
-    }
-
-    setAccentColor(BOMBOCLOCK_ACCENT_COLOR, { persist: false });
-    const accentControl = document.getElementById("accentControl");
-    const normalized = normalizeHexColor(BOMBOCLOCK_ACCENT_COLOR);
-    if (accentControl && normalized) {
-      accentControl.value = normalized;
-    }
-    accentApplied = true;
-  };
-
-  brand.addEventListener("click", () => {
-    activationCount += 1;
-    triggerHintAnimation();
-    if (activationCount >= BOMBOCLOCK_ACTIVATION_CLICKS) {
-      applyReplacements();
-      applyAccent();
-    }
-  });
-
-  brand.addEventListener("animationend", event => {
-    if (event.target === brand) {
-      brand.classList.remove(animationClass);
-    }
-  });
-
-  // Session-only discoverability hint: after ~120s of inactivity, nudge the logo.
-  let idleTimer = null;
-  let hintShown = false;
-  const prefersReducedMotion =
-    typeof window !== "undefined" &&
-    window.matchMedia &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  const showHint = () => {
-    if (hintShown || activationCount > 0) {
-      return;
-    }
-    hintShown = true;
-    brand.classList.add("brand--hint");
-    brand.setAttribute("title", "Probeer eens te klikken...");
-    if (!brand.querySelector(".brand__hint-dot")) {
-      const dot = document.createElement("span");
-      dot.className = "brand__hint-dot";
-      dot.setAttribute("aria-hidden", "true");
-      brand.appendChild(dot);
-    }
-  };
-
-  const clearHint = () => {
-    brand.classList.remove("brand--hint");
-    const dot = brand.querySelector(".brand__hint-dot");
-    if (dot) {
-      dot.remove();
-    }
-  };
-
-  const resetIdle = () => {
-    if (prefersReducedMotion || activationCount > 0) {
-      return;
-    }
-    hintShown = false;
-    clearHint();
-    if (idleTimer) {
-      clearTimeout(idleTimer);
-    }
-    idleTimer = setTimeout(showHint, 120000);
-  };
-
-  ["mousemove", "keydown", "scroll", "touchstart"].forEach(type => {
-    window.addEventListener(type, resetIdle, { passive: true });
-  });
-  brand.addEventListener("click", clearHint);
-  resetIdle();
-}
-
 function setEditingState(event) {
   const editingId = document.getElementById("editingId");
   const labelInput = document.getElementById("labelInput");
@@ -2105,7 +2184,7 @@ function initOnboarding() {
     { sel: "#planner", title: "Nicotineteller", body: "Hier telt je eerstvolgende shagpauze realtime af." },
     { sel: "#createEventForm", title: "Las een pauze in", body: "Maak eigen cues met tijd, herhaling en kleur." },
     { sel: "#notifyToggle", title: "Zet de wekker aan", body: "Schakel notificaties en geluid in zodat ShagWekker echt rinkelt." },
-    { sel: "#soundboard", title: "Soundboard & audio", body: "Kies een track of druk op een soundboard-pad." }
+    { sel: "#audio-lounge", title: "Audio Pauze Parlor", body: "Kies een track en laat het ritme je volgende shagmoment timen." }
   ].filter(step => document.querySelector(step.sel));
 
   if (!steps.length) {
@@ -2308,10 +2387,7 @@ function initThemeSwitcher() {
     });
   }
 
-  initBomboClockEasterEgg();
-
   initAudioPlayer();
-  initSoundboard();
   initShagMeter();
   initOnboarding();
 
