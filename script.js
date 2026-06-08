@@ -1,40 +1,19 @@
-const DEFAULT_EVENTS = [
-  {
-    id: "core-focus",
+// Alle ShagPauzes zijn nu één uniforme, bewerkbare lijst (geen vaste "core" cards meer).
+// Bij een verse installatie zaaien we precies één voorbeeldkaart die de gebruiker
+// kan aanpassen of weggooien zoals elke andere cue.
+function makeExampleEvent() {
+  return {
+    id: uniqueId(),
     time: "10:15",
-    label: "Eerste Kleine Pauze",
+    label: "Voorbeeld Shaggie",
     recurrence: "Daily",
-    description: "Eerste Kleine Pauze = Eerste Shaggie Ritueel -15 Min",
-    color: "#9b6aff"
-  },
-  {
-    id: "core-lunch",
-    time: "12:00",
-    label: "Der Große Pauze",
-    recurrence: "Daily",
-    description: "Maximum Shag Tijd -30 Min",
-    color: "#6affc8"
-  },
-  {
-    id: "core-afternoon",
-    time: "14:30",
-    label: "Middag Kleine Pauze",
-    recurrence: "MonWedThu",
-    description: "Middag Shag Shuffle - even uitblazen en de middagshag aansteken. -15 Min",
-    color: "#ffc66a"
-  },
-  {
-    id: "core-wrap",
-    time: "16:00",
-    label: "Weg hier",
-    recurrence: "MonWedThu",
-    description: "Sluit de dag af met een stevige shag.",
-    color: "#ff9b6a"
-  }
-];
+    color: DEFAULT_ACCENT_COLOR,
+    notes: "Pas me aan of gooi me weg — zo maak je je eigen ShagPauze."
+  };
+}
 
-const DEFAULT_EVENT_IDS = new Set(DEFAULT_EVENTS.map(event => event.id));
-
+// Huidige opslag (bewerkbare cues). De oudere sleutels hieronder dienen enkel als migratiebron.
+const EVENTS_STORAGE_KEY = "shagwekker.events.v2";
 const STORAGE_KEY = "shagwekker.customEvents.v1";
 const LEGACY_KEY = "multiCountdown.times";
 const SUMMARY_MESSAGES = [
@@ -1015,37 +994,70 @@ function clampVolume(value, fallback) {
   return Math.max(0, Math.min(1, num));
 }
 
-function loadCustomEvents() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return normalizeCustomEvents(parsed);
-      }
+// Eén migratiebron uitlezen (v1 custom events, of de alleroudste tijdlijst).
+function readLegacyEvents() {
+  const rawV1 = localStorage.getItem(STORAGE_KEY);
+  if (rawV1) {
+    const parsed = JSON.parse(rawV1);
+    if (Array.isArray(parsed)) {
+      return normalizeEvents(parsed);
     }
-    const legacy = localStorage.getItem(LEGACY_KEY);
-    if (legacy) {
-      const parsedLegacy = JSON.parse(legacy);
-      if (Array.isArray(parsedLegacy)) {
-        const migrated = parsedLegacy.map((time, idx) => ({
+  }
+  const legacy = localStorage.getItem(LEGACY_KEY);
+  if (legacy) {
+    const parsedLegacy = JSON.parse(legacy);
+    if (Array.isArray(parsedLegacy)) {
+      return normalizeEvents(
+        parsedLegacy.map((time, idx) => ({
           id: uniqueId(),
           time,
           label: `Legacy cue ${idx + 1}`,
           recurrence: "Daily",
           color: DEFAULT_ACCENT_COLOR,
           notes: "Imported from the previous version."
-        }));
-        saveCustomEvents(migrated);
-        localStorage.removeItem(LEGACY_KEY);
-        return normalizeCustomEvents(migrated);
-      }
+        }))
+      );
     }
-  } catch (error) {
-    console.warn("Failed to load saved events", error);
   }
-  return [];
+  return null;
 }
+
+// Enige persistentielaag. Vandaag synchroon op localStorage; later eenvoudig te
+// vervangen door een API-backend (zie "Swapping localStorage for an API" in CLAUDE.md).
+const eventStore = {
+  load() {
+    try {
+      const raw = localStorage.getItem(EVENTS_STORAGE_KEY);
+      if (raw !== null) {
+        // Bestaat de sleutel (zelfs een lege lijst) → respecteer de keuze van de gebruiker.
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? normalizeEvents(parsed) : [];
+      }
+      // Geen v2-sleutel: probeer eenmalig oudere data te migreren.
+      const migrated = readLegacyEvents();
+      if (migrated && migrated.length) {
+        this.save(migrated);
+        localStorage.removeItem(STORAGE_KEY);
+        localStorage.removeItem(LEGACY_KEY);
+        return migrated;
+      }
+      // Verse installatie: zaai één bewerkbare voorbeeldkaart.
+      const seeded = normalizeEvents([makeExampleEvent()]);
+      this.save(seeded);
+      return seeded;
+    } catch (error) {
+      console.warn("Failed to load saved events", error);
+      return [];
+    }
+  },
+  save(events) {
+    try {
+      localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(normalizeEvents(events)));
+    } catch (error) {
+      console.warn("Unable to persist events", error);
+    }
+  }
+};
 
 function normalizeWeekdays(value) {
   if (!Array.isArray(value)) {
@@ -1057,12 +1069,22 @@ function normalizeWeekdays(value) {
   return Array.from(new Set(cleaned)).sort((a, b) => a - b);
 }
 
-function normalizeCustomEvents(events) {
+function normalizeEvents(events) {
+  if (!Array.isArray(events)) {
+    return [];
+  }
   return events
     .filter(evt => typeof evt === "object" && evt !== null)
     .map(evt => {
-      const recurrence = ["Daily", "Weekdays", "Weekends", "SpecificWeekdays"].includes(evt.recurrence)
-        ? evt.recurrence
+      // Migreer de oude vaste combo naar het generieke SpecificWeekdays-formaat.
+      let recurrence = evt.recurrence;
+      let weekdays = evt.weekdays;
+      if (recurrence === "MonWedThu") {
+        recurrence = "SpecificWeekdays";
+        weekdays = [1, 3, 4];
+      }
+      recurrence = ["Daily", "Weekdays", "Weekends", "SpecificWeekdays"].includes(recurrence)
+        ? recurrence
         : "Daily";
       const normalized = {
         id: evt.id || uniqueId(),
@@ -1070,22 +1092,22 @@ function normalizeCustomEvents(events) {
         label: typeof evt.label === "string" && evt.label.trim() ? evt.label.trim() : "Untitled cue",
         recurrence,
         color: resolveHexColor(evt.color),
-        notes: typeof evt.notes === "string" ? evt.notes.trim() : ""
+        // notes valt terug op de oude description-veldnaam voor gemigreerde data.
+        notes:
+          typeof evt.notes === "string"
+            ? evt.notes.trim()
+            : typeof evt.description === "string"
+              ? evt.description.trim()
+              : "",
+        // Per-event tijdstempel: handvat voor toekomstige API-synchronisatie.
+        updatedAt: typeof evt.updatedAt === "string" ? evt.updatedAt : new Date().toISOString()
       };
       if (recurrence === "SpecificWeekdays") {
-        normalized.weekdays = normalizeWeekdays(evt.weekdays);
+        normalized.weekdays = normalizeWeekdays(weekdays);
       }
       return normalized;
     })
     .sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
-}
-
-function saveCustomEvents(events) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-  } catch (error) {
-    console.warn("Unable to persist events", error);
-  }
 }
 
 function nextDailyOccurrence(now, time) {
@@ -1124,8 +1146,6 @@ function nextSpecificWeekdaysOccurrence(now, time, allowedWeekdays) {
 
 function nextOccurrenceFor(event, now) {
   switch (event.recurrence) {
-    case "MonWedThu":
-      return nextSpecificWeekdaysOccurrence(now, event.time, [1, 3, 4]);
     case "SpecificWeekdays": {
       const days = Array.isArray(event.weekdays) ? event.weekdays : [];
       if (!days.length) {
@@ -1166,16 +1186,10 @@ function formatCountdown(parts, compact = false) {
   return `${daySegment}${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
 }
 
-function getAllEvents(customEvents) {
-  return [...DEFAULT_EVENTS, ...customEvents];
-}
-
 const WEEKDAY_SHORT = ["Zo", "Ma", "Di", "Wo", "Do", "Vr", "Za"];
 
 function recurrenceTag(recurrence, weekdays) {
   switch (recurrence) {
-    case "MonWedThu":
-      return "Mon/Wed/Thu";
     case "SpecificWeekdays":
       return Array.isArray(weekdays) && weekdays.length
         ? weekdays.map(day => WEEKDAY_SHORT[day]).join(" · ")
@@ -1189,21 +1203,19 @@ function recurrenceTag(recurrence, weekdays) {
   }
 }
 
-function buildEventCard(event, source = "core") {
+function buildEventCard(event) {
   const card = document.createElement("article");
   card.className = "event-card";
   card.dataset.id = event.id;
   card.dataset.time = event.time;
   card.dataset.recurrence = event.recurrence;
-  card.dataset.source = source;
   card.dataset.label = event.label;
   if (event.color) {
     card.dataset.color = event.color;
     card.style.setProperty("--card-accent", event.color);
   }
 
-  const pillLabel = source === "custom" ? "Personal" : "Core";
-  const note = source === "custom" ? event.notes : event.description;
+  const note = event.notes;
 
   card.innerHTML = `
     <div class="event-card__top">
@@ -1211,26 +1223,23 @@ function buildEventCard(event, source = "core") {
         <p class="event-card__label">${event.label}</p>
         <p class="event-card__meta"><span class="event-time">${event.time}</span> · ${recurrenceTag(event.recurrence, event.weekdays)}</p>
       </div>
-      <span class="pill">${pillLabel}</span>
     </div>
     ${note ? `<p class="event-card__note">${note}</p>` : ""}
     <div class="event-card__count" aria-live="off">--h --m --s</div>
   `;
 
-  if (source === "custom") {
-    const actions = document.createElement("div");
-    actions.className = "event-card__actions";
-    actions.innerHTML = `
-      <button type="button" class="btn ghost" data-action="edit">Edit</button>
-      <button type="button" class="btn ghost danger" data-action="remove">Remove</button>
-    `;
-    card.appendChild(actions);
-  }
+  const actions = document.createElement("div");
+  actions.className = "event-card__actions";
+  actions.innerHTML = `
+    <button type="button" class="btn ghost" data-action="edit">Edit</button>
+    <button type="button" class="btn ghost danger" data-action="remove">Remove</button>
+  `;
+  card.appendChild(actions);
 
   return card;
 }
 
-function renderCustomBoard(container, events, emptyStateEl) {
+function renderBoard(container, events, emptyStateEl) {
   container.innerHTML = "";
   if (!events.length) {
     emptyStateEl.hidden = false;
@@ -1239,7 +1248,7 @@ function renderCustomBoard(container, events, emptyStateEl) {
   emptyStateEl.hidden = true;
   const isList = container.tagName === "UL" || container.tagName === "OL";
   events.forEach(event => {
-    const card = buildEventCard(event, "custom");
+    const card = buildEventCard(event);
     if (isList) {
       const li = document.createElement("li");
       li.appendChild(card);
@@ -1300,7 +1309,7 @@ function updateTimelineItem(item, entry, compact, isNext, accent, fallbackAccent
     labelEl.textContent = entry.event.label;
   }
 
-  const detail = entry.event.notes?.trim() || entry.event.description || "";
+  const detail = entry.event.notes?.trim() || "";
   if (detailEl) {
     if (detail) {
       detailEl.textContent = detail;
@@ -1432,8 +1441,7 @@ function updateSummaries(now, events, soonest) {
   liveClock.textContent = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   const customSummaryCount = document.getElementById("customSummaryCount");
-  const customCount = events.filter(evt => !DEFAULT_EVENT_IDS.has(evt.id)).length;
-  customSummaryCount.textContent = customCount;
+  customSummaryCount.textContent = events.length;
 
   const nextEventName = document.getElementById("nextEventName");
   const nextEventCountdown = document.getElementById("nextEventCountdown");
@@ -1443,7 +1451,7 @@ function updateSummaries(now, events, soonest) {
     nextEventName.textContent = `${soonest.event.label} · ${soonest.event.time}`;
     announceNextEvent(soonest.event.label);
     nextEventCountdown.textContent = formatCountdown(diffParts(soonest.remain), false);
-    const focusDetail = soonest.event.notes || soonest.event.description;
+    const focusDetail = soonest.event.notes;
     focusMessage.textContent = focusDetail
       ? `Prep for “${focusDetail}”`
       : `Set the tone for ${soonest.event.label.toLowerCase()}.`;
@@ -1537,8 +1545,7 @@ function initShagMeter() {
       return;
     }
     const now = new Date();
-    const customEvents = loadCustomEvents();
-    const events = getAllEvents(customEvents);
+    const events = eventStore.load();
 
     let soonest = null;
     events.forEach(event => {
@@ -1847,7 +1854,8 @@ function setEditingState(event) {
   submitBtn.textContent = "Update cue";
 }
 
-const CUES_EXPORT_SCHEMA = "shagwekker.cues.v1";
+// Exporteert als v2; parseImportedCues accepteert ook oudere v1-bestanden (zelfde event-vorm).
+const CUES_EXPORT_SCHEMA = "shagwekker.cues.v2";
 let toastStackEl = null;
 
 function initToasts() {
@@ -1954,7 +1962,7 @@ function exportCuesToJson() {
   const payload = {
     schema: CUES_EXPORT_SCHEMA,
     exportedAt: new Date().toISOString(),
-    events: loadCustomEvents()
+    events: eventStore.load()
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -1974,7 +1982,7 @@ function parseImportedCues(text) {
   if (!Array.isArray(rawEvents)) {
     throw new Error("Geen geldige cue-lijst gevonden.");
   }
-  return normalizeCustomEvents(rawEvents);
+  return normalizeEvents(rawEvents);
 }
 
 /* ── Phase B: alarm-clock functionality ── */
@@ -2429,12 +2437,12 @@ function initThemeSwitcher() {
     return;
   }
 
-  let customEvents = loadCustomEvents();
+  let events = eventStore.load();
   let compactMode = false;
 
   const renderAll = () => {
-    renderCustomBoard(customBoard, customEvents, customEmptyState);
-    updateCountdowns(getAllEvents(customEvents), compactMode, { timelineList });
+    renderBoard(customBoard, events, customEmptyState);
+    updateCountdowns(events, compactMode, { timelineList });
   };
 
   renderAll();
@@ -2452,8 +2460,8 @@ function initThemeSwitcher() {
   }
 
   window.addEventListener("storage", evt => {
-    if (evt.key === STORAGE_KEY) {
-      customEvents = loadCustomEvents();
+    if (evt.key === EVENTS_STORAGE_KEY) {
+      events = eventStore.load();
       setEditingState(null);
       renderAll();
     } else if (evt.key === PREFERENCE_KEYS.accentColor && evt.newValue) {
@@ -2465,11 +2473,11 @@ function initThemeSwitcher() {
     compactMode = !compactMode;
     precisionToggle.setAttribute("aria-pressed", String(compactMode));
     precisionToggle.textContent = compactMode ? "Detailed view" : "Compact view";
-    updateCountdowns(getAllEvents(customEvents), compactMode, { timelineList });
+    updateCountdowns(events, compactMode, { timelineList });
   });
 
   demoButton.addEventListener("click", () => {
-    customEvents = normalizeCustomEvents([
+    events = normalizeEvents([
       {
         id: uniqueId(),
         time: "09:45",
@@ -2495,17 +2503,17 @@ function initThemeSwitcher() {
         notes: "Grab that novel or article you've saved."
       }
     ]);
-    saveCustomEvents(customEvents);
+    eventStore.save(events);
     setEditingState(null);
     renderAll();
     showToast("Demo-cues geladen", { tone: "info" });
   });
 
   clearCustom.addEventListener("click", () => {
-    if (!customEvents.length) return;
+    if (!events.length) return;
     if (confirm("Remove all custom cues?")) {
-      customEvents = [];
-      saveCustomEvents(customEvents);
+      events = [];
+      eventStore.save(events);
       setEditingState(null);
       renderAll();
       showToast("Alle cues verwijderd", { tone: "warning" });
@@ -2529,18 +2537,18 @@ function initThemeSwitcher() {
       reader.onload = () => {
         try {
           const imported = parseImportedCues(String(reader.result));
-          const replace = customEvents.length
+          const replace = events.length
             ? confirm("Bestaande cues vervangen? Kies Annuleren om samen te voegen.")
             : true;
           if (replace) {
-            customEvents = imported;
+            events = imported;
           } else {
-            customEvents = normalizeCustomEvents([
-              ...customEvents,
+            events = normalizeEvents([
+              ...events,
               ...imported.map(evt => ({ ...evt, id: uniqueId() }))
             ]);
           }
-          saveCustomEvents(customEvents);
+          eventStore.save(events);
           setEditingState(null);
           renderAll();
           showToast(`${imported.length} cue(s) geïmporteerd`, { tone: "success" });
@@ -2562,14 +2570,14 @@ function initThemeSwitcher() {
     const id = card.dataset.id;
     const action = button.dataset.action;
     if (action === "remove") {
-      customEvents = customEvents.filter(evt => evt.id !== id);
-      saveCustomEvents(customEvents);
+      events = events.filter(evt => evt.id !== id);
+      eventStore.save(events);
       setEditingState(null);
       renderAll();
       showToast("Cue verwijderd", { tone: "info" });
     }
     if (action === "edit") {
-      const targetEvent = customEvents.find(evt => evt.id === id);
+      const targetEvent = events.find(evt => evt.id === id);
       if (targetEvent) {
         setEditingState(targetEvent);
       }
@@ -2601,19 +2609,19 @@ function initThemeSwitcher() {
       return;
     }
 
-    const fields = { label, time, recurrence, color, notes };
+    const fields = { label, time, recurrence, color, notes, updatedAt: new Date().toISOString() };
     if (recurrence === "SpecificWeekdays") {
       fields.weekdays = weekdays;
     }
 
     if (id) {
-      customEvents = customEvents.map(evt => (evt.id === id ? { ...evt, weekdays: undefined, ...fields } : evt));
+      events = events.map(evt => (evt.id === id ? { ...evt, weekdays: undefined, ...fields } : evt));
     } else {
-      customEvents = [...customEvents, { id: uniqueId(), ...fields }];
+      events = [...events, { id: uniqueId(), ...fields }];
     }
 
-    customEvents = normalizeCustomEvents(customEvents);
-    saveCustomEvents(customEvents);
+    events = normalizeEvents(events);
+    eventStore.save(events);
     renderAll();
     createEventForm.reset();
     syncWeekdayPicker();
@@ -2622,6 +2630,6 @@ function initThemeSwitcher() {
   });
 
   setInterval(() => {
-    updateCountdowns(getAllEvents(customEvents), compactMode, { timelineList });
+    updateCountdowns(events, compactMode, { timelineList });
   }, 1000);
 })();

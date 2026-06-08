@@ -34,23 +34,33 @@ Two pages (`gallery.html`, `het-archief.html`) have small **inline** IIFEs (`ini
 
 ### Event / countdown data model
 
-The countdown engine is the core. Events come from two sources, merged by `getAllEvents()`:
-- `DEFAULT_EVENTS` — hardcoded core breaks at the top of `script.js` (ids prefixed `core-`, tracked in `DEFAULT_EVENT_IDS`).
-- **Custom events** — user-created, persisted in `localStorage`.
+The countdown engine is the core. Every event is a **single, uniform, fully-editable** entity — there are no hardcoded "core" cards anymore. The whole list lives in `localStorage` behind the `eventStore` adapter (see persistence conventions) and is loaded with `eventStore.load()`. On a verse install the store is seeded with exactly one editable example card (`makeExampleEvent()`); the user can edit or delete it like any other cue. Clearing all cues leaves an empty store (the presence of the v2 key is the "already initialized" flag, so it is **not** re-seeded).
 
-Recurrence is handled by `nextOccurrenceFor(event, now)` switching on `event.recurrence`. Supported values: `Daily`, `Weekdays`, `Weekends`, `SpecificWeekdays` (reads `event.weekdays`, an array of JS day numbers 0–6), and the legacy named combo `MonWedThu` (= days `[1,3,4]`). Adding a new recurrence type means adding a `case` here **and** a branch in `recurrenceTag()` for the display label.
+An event has the shape `{ id, time, label, recurrence, color, notes, updatedAt, weekdays? }`. `notes` replaced the old core-only `description` field (migration falls back to `description`). `updatedAt` is a per-event ISO timestamp written on every create/update — it carries no behaviour today but is the intended sync key for a future API backend.
+
+Recurrence is handled by `nextOccurrenceFor(event, now)` switching on `event.recurrence`. Supported values: `Daily`, `Weekdays`, `Weekends`, `SpecificWeekdays` (reads `event.weekdays`, an array of JS day numbers 0–6). The legacy named combo `MonWedThu` (= days `[1,3,4]`) is no longer a runtime value — `normalizeEvents()` folds it into `SpecificWeekdays` on load. Adding a new recurrence type means adding a `case` here **and** a branch in `recurrenceTag()` for the display label.
 
 `updateCountdowns()` runs on a 1-second `setInterval`, recomputing the soonest event and refreshing the timeline, summaries, tab badge, and alarm checks.
 
 ### Persistence conventions
 
 All `localStorage` keys are namespaced `shagwekker.*` and **version-suffixed** (`.vN`) so the schema can evolve without colliding:
-- `shagwekker.customEvents.v1` (`STORAGE_KEY`) — custom events; `multiCountdown.times` (`LEGACY_KEY`) is migrated in.
+- `shagwekker.events.v2` (`EVENTS_STORAGE_KEY`) — the unified, editable event list, read/written **only** through the `eventStore` adapter. On first load it migrates from `shagwekker.customEvents.v1` (`STORAGE_KEY`) and the oldest `multiCountdown.times` (`LEGACY_KEY`), then removes those keys; if there is nothing to migrate it seeds the example card.
 - `shagwekker.shagmeter.state.v1` — ShagMeter state.
 - `shagwekker.audio.state.v1` (`AUDIO_STATE_KEY`) — audio player session (track index, position, volume, mute, shuffle, repeat); migrates the legacy `shagwekker.audio.shuffle.v1` key.
 - `shagwekker.preferences.*` — high-contrast and accent-color prefs.
 
-A `storage` event listener keeps multiple open tabs in sync. When changing a persisted shape, bump the version suffix and handle migration from the old key rather than mutating in place.
+A `storage` event listener (keyed on `EVENTS_STORAGE_KEY`) keeps multiple open tabs in sync. When changing a persisted shape, bump the version suffix and handle migration from the old key rather than mutating in place.
+
+#### Swapping localStorage for an API (accounts / cloud sync)
+
+All event persistence is funnelled through the single `eventStore` adapter (`load()` / `save(events)`) and an in-memory `events` array drives rendering — no call site touches `localStorage` for events directly. To back events with a user account:
+
+1. Make `eventStore.load()` / `eventStore.save()` `async` (fetch/PUT the signed-in user's events), keeping the localStorage copy as an offline cache and seed fallback.
+2. `await` the two `eventStore.load()` call sites — `renderAll()` in the planner IIFE and `renderTimelineCard()` in `initShagMeter()` — and `await` the `eventStore.save()` calls in the planner handlers.
+3. Use the per-event `updatedAt` timestamp as the conflict/merge key when reconciling local and remote copies.
+
+Keep the seam narrow: nothing outside `eventStore` should know whether the backend is localStorage or an API.
 
 ### Service worker (`sw.js`)
 
