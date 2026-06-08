@@ -1,4 +1,4 @@
-const CACHE_NAME = "shagwekker-v4";
+const CACHE_NAME = "shagwekker-v005";
 const SHELL = [
   "/",
   "/index.html",
@@ -13,7 +13,7 @@ const SHELL = [
 ];
 
 // Large media is served network-only — never precache or cache it.
-const NETWORK_ONLY = ["/audio/", "/gallery/", "/files/", "/HetArchief/"];
+const NETWORK_ONLY = ["/audio/", "/gallery/", "/files/"];
 
 self.addEventListener("install", event => {
   event.waitUntil(

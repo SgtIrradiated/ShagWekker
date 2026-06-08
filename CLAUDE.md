@@ -22,7 +22,7 @@ There are no lint/test/build commands. "Testing" is manual: load the relevant pa
 
 Every HTML page loads the **same** `script.js`. There is no router and no per-page bundle. Instead, the file defines many `initX()` functions; each one looks up its anchor element (e.g. `document.querySelector("[data-audio-player]")`, `document.getElementById("timelineList")`) and **returns early if that element is absent**. A single IIFE `init()` at the bottom of `script.js` calls every `initX()` unconditionally — page differentiation happens entirely through which elements exist in each page's markup. When adding a feature, follow this pattern: write an `initFeature()` that bails when its root element is missing, then add one call inside the bottom `init()`.
 
-Two pages (`gallery.html`, `het-archief.html`) have small **inline** IIFEs (`initGallery`, `initArchive`) instead of living in `script.js`, because their content is page-local.
+`gallery.html` has a small **inline** IIFE (`initGallery`) instead of living in `script.js`, because its content is page-local.
 
 ### Pages
 
@@ -30,7 +30,6 @@ Two pages (`gallery.html`, `het-archief.html`) have small **inline** IIFEs (`ini
 - `shagmeter.html` — standalone ShagMeter tracker view.
 - `library.html` — resource/download library.
 - `gallery.html` — image gallery (inline script).
-- `het-archief.html` — video archive (inline script).
 
 ### Event / countdown data model
 
@@ -64,7 +63,7 @@ Keep the seam narrow: nothing outside `eventStore` should know whether the backe
 
 ### Service worker (`sw.js`)
 
-App-shell caching with a versioned `CACHE_NAME` (`shagwekker-vN`). The `SHELL` array is precached; everything under `/audio/`, `/gallery/`, `/files/`, `/HetArchief/` is **network-only and must never be cached** (large media). HTML/navigations use stale-while-revalidate with an `/index.html` fallback; other shell assets are cache-first.
+App-shell caching with a versioned `CACHE_NAME` (`shagwekker-vNNN`, zero-padded three digits). The `SHELL` array is precached; everything under `/audio/`, `/gallery/`, `/files/` is **network-only and must never be cached** (large media). HTML/navigations use stale-while-revalidate with an `/index.html` fallback; other shell assets are cache-first.
 
 **Whenever you change a shell asset (`index.html`, `style.css`, `script.js`, manifest, shell icons), bump `CACHE_NAME`** — otherwise returning users keep the stale cached copy. Add genuinely new shell files to the `SHELL` array.
 
