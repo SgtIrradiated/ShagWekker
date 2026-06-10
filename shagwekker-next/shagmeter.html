@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="nl" data-theme="dark" data-theme-choice="auto">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShagMeter — ShagWekker</title>
+  <meta name="description" content="ShagMeter — turf je shaggies en hark dat dagdoel binnen.">
+  <meta name="theme-color" content="#0b0d12">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Spring direct naar de inhoud</a>
+
+  <div class="bg-glow" aria-hidden="true"></div>
+
+  <header class="site-header glass" data-site-header>
+    <a class="brand" href="/index.html">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__text">
+        <span class="brand__name">ShagWekker</span>
+        <span class="brand__tag">Je kan nooit genoeg Shag roken.</span>
+      </span>
+    </a>
+
+    <button class="nav-toggle" type="button" data-nav-toggle aria-expanded="false" aria-controls="siteNav">
+      <span class="nav-toggle__bars" aria-hidden="true"></span>
+      Menu
+    </button>
+
+    <nav id="siteNav" class="site-nav" data-site-nav aria-label="Hoofdmenu">
+      <ul class="site-nav__list">
+        <li><a href="/index.html#shag">Shag</a></li>
+        <li><a href="/index.html#nicotineteller">Nicotineteller</a></li>
+        <li><a href="/index.html#inlassen">Inlassen</a></li>
+        <li><a href="/index.html#insights">Insights</a></li>
+        <li><a href="/shagmeter.html" aria-current="page">ShagMeter</a></li>
+        <li><a href="/gallery.html">Gallery</a></li>
+        <li><a href="/files/">ShagFiles</a></li>
+      </ul>
+      <div class="site-nav__actions">
+        <button class="btn btn--chip" type="button" data-contrast-toggle aria-pressed="false">High contrast</button>
+      </div>
+    </nav>
+  </header>
+
+  <div class="nav-backdrop" data-nav-backdrop hidden></div>
+
+  <main id="main" data-page-main>
+    <section class="section section--page-top">
+      <header class="section__head">
+        <h2 class="section__title">ShagMeter</h2>
+        <p class="section__lead">Turf je shaggies en hark dat dagdoel binnen.</p>
+      </header>
+
+      <div class="shagmeter glass" data-shagmeter data-shagmeter-goal="8">
+        <div class="shagmeter__ring" data-shagmeter-ring role="meter" aria-label="ShagMeter dagdoel"
+             aria-valuemin="0" aria-valuemax="8" aria-valuenow="0"
+             aria-valuetext="0 van 8 Shaggies genoteerd.">
+          <div class="shagmeter__core">
+            <span class="shagmeter__count" data-shagmeter-count>0</span>
+            <span class="shagmeter__goal">/ 8</span>
+          </div>
+        </div>
+        <p class="shagmeter__status" data-shagmeter-status>0 van 8 Shaggies genoteerd.</p>
+        <div class="shagmeter__actions">
+          <button class="btn btn--primary" type="button" data-shagmeter-add>+1 Shaggie</button>
+          <button class="btn btn--ghost" type="button" data-shagmeter-reset>Reset</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="next-cue glass" data-next-cue hidden>
+        <span class="next-cue__eyebrow">Volgende shagmoment</span>
+        <span class="next-cue__label" data-next-cue-label></span>
+        <span class="next-cue__countdown" data-next-cue-countdown>--:--:--</span>
+        <span class="next-cue__time" data-next-cue-time></span>
+      </div>
+      <p class="next-cue next-cue--empty glass" data-next-cue-empty>
+        Geen ShagPauzes ingelast. <a href="/index.html#inlassen">Las er eentje in via de planner.</a>
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer" data-page-footer>
+    <p>Shag kun je helaas niet eten, maar wel lekker roken.</p>
+  </footer>
+
+  <div class="toast-region" data-toast-region aria-live="polite"></div>
+
+  <script src="/script.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="nl" data-theme="dark" data-theme-choice="auto">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ShagWekker</title>
+  <meta name="description" content="ShagWekker — Een Wekker. Voor Shag. Door Shag. Simpelweg Revolutionair.">
+  <meta name="theme-color" content="#0b0d12">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Spring direct naar de inhoud</a>
+
+  <div class="bg-glow" aria-hidden="true"></div>
+
+  <header class="site-header glass" data-site-header>
+    <a class="brand" href="/index.html">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__text">
+        <span class="brand__name">ShagWekker</span>
+        <span class="brand__tag">Je kan nooit genoeg Shag roken.</span>
+      </span>
+    </a>
+
+    <button class="nav-toggle" type="button" data-nav-toggle aria-expanded="false" aria-controls="siteNav">
+      <span class="nav-toggle__bars" aria-hidden="true"></span>
+      Menu
+    </button>
+
+    <nav id="siteNav" class="site-nav" data-site-nav aria-label="Hoofdmenu">
+      <ul class="site-nav__list">
+        <li><a href="#shag">Shag</a></li>
+        <li><a href="#nicotineteller">Nicotineteller</a></li>
+        <li><a href="#inlassen">Inlassen</a></li>
+        <li><a href="#insights">Insights</a></li>
+        <li><a href="/shagmeter.html">ShagMeter</a></li>
+        <li><a href="/gallery.html">Gallery</a></li>
+        <li><a href="/files/">ShagFiles</a></li>
+      </ul>
+      <div class="site-nav__actions">
+        <button class="btn btn--chip" type="button" data-notify-toggle aria-pressed="false">Notificaties aan</button>
+        <button class="btn btn--chip" type="button" data-contrast-toggle aria-pressed="false">High contrast</button>
+      </div>
+    </nav>
+  </header>
+
+  <div class="nav-backdrop" data-nav-backdrop hidden></div>
+
+  <main id="main" data-page-main>
+
+    <!-- ============================== Hero ============================== -->
+    <section id="shag" class="hero">
+      <p class="hero__eyebrow">Medemogelijk gemaakt door British American Tobacco</p>
+      <h1 class="hero__title">ShagWekker.</h1>
+      <p class="hero__lead">Een Wekker. Voor Shag. Door Shag.</p>
+      <p class="hero__lead hero__lead--accent">Simpelweg Revolutionair.</p>
+
+      <div class="hero__actions">
+        <a class="btn btn--primary" href="#inlassen">Open planner</a>
+        <button class="btn btn--ghost" type="button" data-demo-button>NPC Timer Demo</button>
+        <a class="btn btn--ghost" href="/files/">ShagFiles</a>
+      </div>
+
+      <div class="hero__next glass" data-hero-next hidden>
+        <span class="hero__next-eyebrow">Volgende shagmoment</span>
+        <span class="hero__next-label" data-hero-label></span>
+        <span class="hero__next-countdown" data-hero-countdown>--:--:--</span>
+        <span class="hero__next-time" data-hero-time></span>
+      </div>
+      <p class="hero__next hero__next--empty glass" data-hero-empty>
+        Nog niks ingelast — je longen vervelen zich. Open de planner en las wat in.
+      </p>
+    </section>
+
+    <!-- ========================= Nicotineteller ========================= -->
+    <section id="nicotineteller" class="section">
+      <header class="section__head">
+        <h2 class="section__title">Ingelasde Nicotine Doseringen</h2>
+      </header>
+      <div class="status-grid">
+        <article class="stat glass">
+          <span class="stat__value" data-stat-cues>0</span>
+          <span class="stat__unit">ingelasde cues</span>
+          <p class="stat__caption">Elke sigaret = 0,7 mg aan Nicotine*** dus rook er lekker twee!</p>
+        </article>
+        <article class="stat glass">
+          <span class="stat__value" data-stat-mg>0,0&nbsp;mg</span>
+          <span class="stat__unit">geplande dagdosering</span>
+          <p class="stat__caption">Roken is lekker en bevorderd de cognitieve functie.</p>
+        </article>
+        <article class="stat stat--zen glass">
+          <p class="stat__zen">Shag.</p>
+        </article>
+      </div>
+    </section>
+
+    <!-- ============================ Planner ============================= -->
+    <section id="inlassen" class="section planner" data-planner>
+      <header class="section__head">
+        <h2 class="section__title">Al je ShagPauzes lopen hier realtime mee.</h2>
+        <p class="section__lead">Laat de glimmende timeline jouw volgende shagmoment aftellen — al je eigen inlassingen lopen hier mee.</p>
+        <p class="section__motto">Als je maar niet genoeg van je Shag kan krijgen.</p>
+      </header>
+
+      <div class="planner__grid">
+        <form class="cue-form glass" data-cue-form novalidate>
+          <h3 class="cue-form__title">Las een shag pauze in;</h3>
+
+          <div class="field">
+            <label for="cueLabel">Naam van je shagmoment</label>
+            <input id="cueLabel" name="label" type="text" maxlength="60" required
+                   placeholder="bijv. Vrijmibo Shaggie" autocomplete="off">
+          </div>
+
+          <div class="field field--row">
+            <div class="field">
+              <label for="cueTime">Tijdstip</label>
+              <input id="cueTime" name="time" type="time" required>
+            </div>
+            <div class="field">
+              <label for="cueColor">Kleurtje</label>
+              <input id="cueColor" name="color" type="color" value="#ff0000">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="cueRecurrence">Herhaling</label>
+            <select id="cueRecurrence" name="recurrence">
+              <option value="Daily">Elke dag</option>
+              <option value="Weekdays">Doordeweeks (ma–vr)</option>
+              <option value="Weekends">Weekend (za–zo)</option>
+              <option value="SpecificWeekdays">Specifieke dagen</option>
+            </select>
+          </div>
+
+          <fieldset class="weekday-picker" data-weekday-picker hidden>
+            <legend>Op welke dagen?</legend>
+            <label><input type="checkbox" name="weekday" value="1"><span>Ma</span></label>
+            <label><input type="checkbox" name="weekday" value="2"><span>Di</span></label>
+            <label><input type="checkbox" name="weekday" value="3"><span>Wo</span></label>
+            <label><input type="checkbox" name="weekday" value="4"><span>Do</span></label>
+            <label><input type="checkbox" name="weekday" value="5"><span>Vr</span></label>
+            <label><input type="checkbox" name="weekday" value="6"><span>Za</span></label>
+            <label><input type="checkbox" name="weekday" value="0"><span>Zo</span></label>
+          </fieldset>
+
+          <div class="field">
+            <label for="cueNotes">Notities</label>
+            <textarea id="cueNotes" name="notes" rows="3" maxlength="280"
+                      placeholder="bijv. Twee vloeitjes meenemen."></textarea>
+          </div>
+
+          <div class="cue-form__actions">
+            <button class="btn btn--primary" type="submit" data-cue-submit>Las in!</button>
+            <button class="btn btn--ghost" type="button" data-cue-cancel hidden>Annuleer bewerking</button>
+          </div>
+        </form>
+
+        <div class="timeline glass">
+          <h3 class="timeline__title">Ingelasde ShagPauzes Overzicht</h3>
+          <p class="timeline__lead">Las een ShagPauze in, en bewerk ze hier!</p>
+
+          <ol class="timeline__list" id="timelineList" data-timeline-list></ol>
+          <p class="timeline__empty" data-timeline-empty hidden>
+            Nog geen ShagPauzes ingelast. Je timeline staat droog — las er rap eentje in.
+          </p>
+
+          <div class="timeline__toolbar">
+            <button class="btn btn--chip" type="button" data-export-button>Exporteer cues</button>
+            <button class="btn btn--chip" type="button" data-import-button>Importeer cues</button>
+            <input type="file" accept="application/json,.json" data-import-input hidden>
+            <button class="btn btn--chip btn--danger" type="button" data-clear-button>Gooi alles weg</button>
+          </div>
+
+          <p class="timeline__alarm-note">
+            <button class="btn btn--chip" type="button" data-chime-toggle aria-pressed="true">Belletje aan</button>
+            <span>Let op: de wekker gaat alleen af zolang dit tabblad open en in beeld is — browsers leggen achtergrondtabbladen aan de ketting.</span>
+          </p>
+        </div>
+      </div>
+
+      <div class="sr-only" aria-live="polite" data-countdown-announcer></div>
+    </section>
+
+    <!-- =========================== ShagMeter ============================ -->
+    <section id="shagmeter" class="section">
+      <header class="section__head">
+        <h2 class="section__title">ShagMeter</h2>
+        <p class="section__lead">Turf je shaggies en hark dat dagdoel binnen.</p>
+      </header>
+
+      <div class="shagmeter glass" data-shagmeter data-shagmeter-goal="8">
+        <div class="shagmeter__ring" data-shagmeter-ring role="meter" aria-label="ShagMeter dagdoel"
+             aria-valuemin="0" aria-valuemax="8" aria-valuenow="0"
+             aria-valuetext="0 van 8 Shaggies genoteerd.">
+          <div class="shagmeter__core">
+            <span class="shagmeter__count" data-shagmeter-count>0</span>
+            <span class="shagmeter__goal">/ 8</span>
+          </div>
+        </div>
+        <p class="shagmeter__status" data-shagmeter-status>0 van 8 Shaggies genoteerd.</p>
+        <div class="shagmeter__actions">
+          <button class="btn btn--primary" type="button" data-shagmeter-add>+1 Shaggie</button>
+          <button class="btn btn--ghost" type="button" data-shagmeter-reset>Reset</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================ Insights ============================ -->
+    <section id="insights" class="section">
+      <header class="section__head">
+        <p class="section__eyebrow">Van Nelle Zware</p>
+        <h2 class="section__title">Pro-Nicotinergische websites.</h2>
+      </header>
+      <div class="insights-grid">
+        <a class="insight-tile glass" href="https://ishetalpauze.nl" rel="noopener noreferrer" target="_blank">
+          <span class="insight-tile__name">IsHetAlPauze.nl</span>
+          <span class="insight-tile__hint">De inferieure voorganger van ShagWekker. (Plugin Circlejerk)</span>
+        </a>
+      </div>
+    </section>
+
+    <!-- ============================ Theming ============================= -->
+    <section id="pimp" class="section">
+      <header class="section__head">
+        <h2 class="section__title">Pimp je wekker</h2>
+        <p class="section__lead">Kies je sfeer en je signatuurkleur — de hele tent kleurt mee.</p>
+      </header>
+
+      <div class="theme-panel glass">
+        <fieldset class="theme-switcher" data-theme-switcher>
+          <legend>Thema</legend>
+          <button class="btn btn--chip" type="button" data-theme-choice="light" aria-pressed="false">Licht</button>
+          <button class="btn btn--chip" type="button" data-theme-choice="dark" aria-pressed="false">Donker</button>
+          <button class="btn btn--chip" type="button" data-theme-choice="sepia" aria-pressed="false">Sepia</button>
+          <button class="btn btn--chip" type="button" data-theme-choice="auto" aria-pressed="true">Auto</button>
+        </fieldset>
+        <div class="accent-controls">
+          <label class="accent-controls__label" for="accentInput">Accentkleur</label>
+          <input id="accentInput" type="color" value="#ff0000" data-accent-input>
+          <button class="btn btn--chip" type="button" data-accent-reset>Terug naar rood</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="site-footer" data-page-footer>
+    <p>Shag kun je helaas niet eten, maar wel lekker roken.</p>
+  </footer>
+
+  <div class="toast-region" data-toast-region aria-live="polite"></div>
+  <audio data-alarm-chime preload="auto" hidden></audio>
+
+  <script src="/script.js" defer></script>
+</body>
+</html>
